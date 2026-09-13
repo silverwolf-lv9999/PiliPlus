@@ -729,6 +729,7 @@ class VideoDetailController extends GetxController
               typeTag: entry.typeTag!,
               isMp4: entry.mediaType == 1,
               hasDashAudio: entry.hasDashAudio,
+              audioOnly: entry.audioOnly,
             )
           : NetworkSource(
               videoSource: videoUrl!,
