@@ -55,6 +55,7 @@ abstract final class SettingBoxKey {
       minLikeRatioForRecommend = 'minLikeRatioForRecommend',
       exemptFilterForFollowed = 'exemptFilterForFollowed',
       banWordForRecommend = 'banWordForRecommend',
+      banTagForRecommend = 'banTagForRecommend',
       applyFilterToRelatedVideos = 'applyFilterToRelatedVideos',
       autoUpdate = 'autoUpdate',
       maxCacheSize = 'maxCacheSize',
