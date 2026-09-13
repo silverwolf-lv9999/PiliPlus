@@ -232,20 +232,21 @@ class AudioController extends GetxController
   /// 本地缓存模式：根据 arguments 构造最小 DetailItem 并填充界面，不联网。
   void _initLocalItem(Map args) {
     final Object? localOid = args['localOid'];
-    if (localOid != null) {
-      oid = Int64(localOid as int);
+    if (localOid is int) {
+      oid = Int64(localOid);
     }
+    final Object? localDuration = args['localDuration'];
     audioItem.value = DetailItem(
       arc: BKArchive(
         oid: oid,
         title: (args['localTitle'] as String? ?? ''),
         cover: (args['localCover'] as String? ?? ''),
-        duration: args['localDuration'] case final int d ? Int64(d) : null,
+        duration: localDuration is int ? Int64(localDuration) : null,
         displayedOid: oid.toString(),
       ),
       owner: Author(
         name: args['localOwnerName'] as String?,
-        mid: localOid != null ? oid : null,
+        mid: localOid is int ? oid : null,
       ),
       stat: BKStat(),
     );
