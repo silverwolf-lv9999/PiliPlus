@@ -25,6 +25,7 @@ import 'package:PiliPlus/utils/image_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
 import 'package:PiliPlus/utils/share_utils.dart';
+import 'package:PiliPlus/utils/utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -316,13 +317,25 @@ class AuthorPanel extends StatelessWidget {
               ),
               ListTile(
                 title: Text(
+                  '复制链接',
+                  style: theme.textTheme.titleSmall,
+                ),
+                leading: const Icon(Icons.copy_rounded, size: 19),
+                onTap: () {
+                  Get.back();
+                  Utils.copyText('${HttpString.opusBaseUrl}/${item.idStr}');
+                },
+                minLeadingWidth: 0,
+              ),
+              ListTile(
+                title: Text(
                   '分享动态',
                   style: theme.textTheme.titleSmall,
                 ),
                 leading: const Icon(Icons.share_outlined, size: 19),
                 onTap: () {
                   Get.back();
-                  ShareUtils.shareText(
+                  ShareUtils.shareToApp(
                     '${HttpString.opusBaseUrl}/${item.idStr}',
                   );
                 },

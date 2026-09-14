@@ -75,6 +75,14 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-09-14 【新功能】分享支持「仅复制链接」
+- 来源：上游 issue bggRGjQaUbCoE/PiliPlus#2606「分享功能可不可以只复制链接」，用户确认痛点=动态没有复制链接选项。
+- 改动（均基于当前 main，未发 release）：
+  - `lib/utils/share_utils.dart`：新增 `shareToApp`（直接系统分享）；`shareText` 在移动端改为弹 SmartDialog 菜单「复制链接 / 分享到其他应用」（返回 bool?，false=复制，true=系统分享，null=取消），桌面端仍直接复制。
+  - `lib/pages/dynamics/widgets/author_panel.dart`：动态「…」面板新增「复制链接」项；「分享动态」改走 `shareToApp`（避免二级弹窗）。
+  - 其它自带「复制链接」的入口（UGG/PGC/音乐/直播/文章顶部）改用 `shareToApp`；未带复制选项的入口（文章底栏/音乐/话题/动态详情/用户主页/收藏夹）继续走 `shareText`，自动获得复制选项。
+- ⚠️ 沙箱无 Flutter SDK，未跑 `flutter analyze`，需构建验证。
+
 ### 2026-09-14 【修复】2.1.4.2 版本号回退成 1.0/1
 - 现象：安装后 Android 系统显示版本名 `1.0`、版本号 `1`（文件名却对，是 `2.1.4.2+5381`）。
 - 根因：Flutter 的 pubspec `version` 不接受四段点数版本名（`2.1.4.2`），构建时报 `Invalid version ... default value will be used`，回退成默认 `1.0`/`1`。

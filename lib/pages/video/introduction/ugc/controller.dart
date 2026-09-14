@@ -333,7 +333,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
               ),
               onTap: () {
                 Get.back();
-                ShareUtils.shareText(
+                ShareUtils.shareToApp(
                   '${videoDetail.title} '
                   'UP主: ${videoDetail.owner!.name!}'
                   ' - $videoUrl',

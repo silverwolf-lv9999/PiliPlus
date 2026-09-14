@@ -265,7 +265,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
         icon: const Icon(Icons.more_vert, size: 19),
         itemBuilder: (BuildContext context) => <PopupMenuEntry>[
           PopupMenuItem(
-            onTap: () => ShareUtils.shareText(controller.url),
+            onTap: () => ShareUtils.shareToApp(controller.url),
             child: const Row(
               spacing: 10,
               mainAxisSize: .min,

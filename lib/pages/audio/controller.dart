@@ -738,7 +738,7 @@ class AudioController extends GetxController
                   :final arc,
                   :final owner,
                 )) {
-                  ShareUtils.shareText(
+                  ShareUtils.shareToApp(
                     '${arc.title} '
                     'UP主: ${owner.name}'
                     ' - $audioUrl',
