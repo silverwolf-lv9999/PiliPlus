@@ -42,10 +42,11 @@
 - 工作流用法：`workflow_dispatch`，参数：
   - `ref`：分支（发布用 `main`）
   - `tag`：**为空 = 只出 artifact，不创建 release**；**非空 = 创建 release**。
-  - `app_version`：**应用内版本号**（如 `2.1.4.2`），传给 `build.ps1` 覆盖 `pili.name`；留空则用上游版本+提交 hash。
+  - `app_version`：**系统/应用内版本号**（如 `2.1.4x2`），传给 `build.ps1`，同时作为 `pili.name`（应用内展示）和 `--build-name`（Android 版本名）；留空则用上游版本+提交 hash。
   - 测试阶段 `tag=""`，不发 release；发布时同时传 `app_version=<版本号>` 和 `tag=<tag>`。
 - **签名（自 2.1.4.2 起）**：不用 debug 签名，用本地 `.signing/release_keystore.jks`（alias `piliplus`）。CI 通过 `SIGN_KEYSTORE_BASE64`/`KEYSTORE_PASSWORD`/`KEY_ALIAS`/`KEY_PASSWORD` 4 个 secrets 解码并配置签名；本机 build.gradle.kts 若存在 `android/key.properties` 也会用 release 签名。
-- **版本命名规范（用户要求）**：`上游版本号.X`，其中 X = 相对官方版本的第几次发布。例：基于官方 2.1.4 → `2.1.4.1`、`2.1.4.2`。
+- **版本命名规范**：release 名用 `上游版本号.X`（如 `2.1.4.2`）；但 **Android 系统/应用内版本号用 `2.1.4xN` 格式**（字母 x 分隔，如 `2.1.4x1`/`2.1.4x2`）——因为 Flutter 的 pubspec `version` 不接受四段点数（`2.1.4.2` 会被判非法并回退成 `1.0`/`1`）。
+- **版本号怎么落地**：`build.ps1` 只把**合法的三段版本名**（如 `2.1.4`）写进 pubspec，`versionCode` 用 `git rev-list --count`；`flutter build` 用 `--build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"` 覆盖，使系统版本名= `2.1.4xN`、versionCode 正确。详见日志「2.1.4.2 版本号回退修复」。
 - **更新日志要求**：写“本次 release 相比上一次 release 改了什么”，不要罗列历史累积的所有功能。
 - 发布后需 `PATCH` release 改 `name`（默认是 tag 名）并写 `body`（更新日志）。
 - 拉取 APK 用 artifact 下载接口（需 token，`repo` + `actions:read`）。
@@ -73,6 +74,16 @@
 ## 九、更新 / 修改日志
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
+
+### 2026-09-14 【修复】2.1.4.2 版本号回退成 1.0/1
+- 现象：安装后 Android 系统显示版本名 `1.0`、版本号 `1`（文件名却对，是 `2.1.4.2+5381`）。
+- 根因：Flutter 的 pubspec `version` 不接受四段点数版本名（`2.1.4.2`），构建时报 `Invalid version ... default value will be used`，回退成默认 `1.0`/`1`。
+- 修复：
+  - `lib/scripts/build.ps1`：pubspec 只写**合法三段版本名** `2.1.4+<versionCode>`；`pili.name`（应用内展示）与 `env.BUILD_NAME` 用展示版本号；新增输出 `BUILD_NUMBER`。
+  - `.github/workflows/build.yml`：`flutter build apk ... --build-name="${{ env.BUILD_NAME }}" --build-number="${{ env.BUILD_NUMBER }}"`。
+- 版本格式（用户确认）：**系统/应用内版本号用 `2.1.4xN`**（字母 x 分隔），本次发布为 `2.1.4x2`、versionCode `5383`（APP 内部 versionName=`2.1.4x2` 已验证）。
+- 提交：`fork/main` @ `e9dc284ce`；发布 run/action 号 34842905489，release 名 `2.1.4.2`、tag `v2.1.4.2`。
+- 文件：`lib/scripts/build.ps1`、`.github/workflows/build.yml`。
 
 ### 2026-09-14 【正式签名 + 应用内版本号】重新发布 `2.1.4.2`（tag `v2.1.4.2`）
 - 背景：应用内版本号需显示 `.X` 后缀（如 `2.1.4.2`）；并且不再用 debug 签名，改用本地新生成的 release 签名。
