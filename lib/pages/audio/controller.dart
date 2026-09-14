@@ -85,6 +85,10 @@ class AudioController extends GetxController
   /// 全局播放会话的固定 tag：使播放器/曲目不随页面返回而销毁。
   static const String sessionTag = 'audioFloatSession';
 
+  /// 是否有活跃的音频播放会话（独立于控制器实例存在，供顶层悬浮窗订阅，
+  /// 避免悬浮窗在会话尚未建立时构建导致永远不会显示）。
+  static final audioSessionActive = RxBool(false);
+
   /// 应用内悬浮窗控制开关（响应式，供悬浮窗及开关实时联动）。
   final enableFloat = RxBool(Pref.enableAppFloatAudio);
 
@@ -283,6 +287,7 @@ class AudioController extends GetxController
   /// 重置为「新会话」状态（保留媒体播放器/资源，仅清空会话数据）。
   void _resetSession() {
     audioItem.value = null;
+    audioSessionActive.value = false;
     playing.value = false;
     hasLike.value = false;
     coinNum.value = 0;
@@ -352,6 +357,7 @@ class AudioController extends GetxController
 
   void _updateCurrItem(DetailItem item) {
     audioItem.value = item;
+    audioSessionActive.value = true;
     hasLike.value = item.stat.hasLike_7;
     coinNum.value = item.stat.hasCoin_8 ? 2 : 0;
     hasFav.value = item.stat.hasFav;

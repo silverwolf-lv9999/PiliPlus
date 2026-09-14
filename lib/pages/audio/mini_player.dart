@@ -28,10 +28,15 @@ class _AudioMiniPlayerState extends State<AudioMiniPlayer> {
   @override
   Widget build(BuildContext context) {
     if (!PlatformUtils.isMobile) return const SizedBox.shrink();
-    final controller = AudioController.maybeInstance;
-    if (controller == null) return const SizedBox.shrink();
 
     return Obx(() {
+      // 订阅独立的“会话激活”信号，避免顶层 widget 首次构建时会话尚未
+      // 建立、后续却又不重建的问题。
+      if (!AudioController.audioSessionActive.value) {
+        return const SizedBox.shrink();
+      }
+      final controller = AudioController.maybeInstance;
+      if (controller == null) return const SizedBox.shrink();
       if (!controller.enableFloat.value) return const SizedBox.shrink();
       final item = controller.audioItem.value;
       if (item == null) return const SizedBox.shrink();
