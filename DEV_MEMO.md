@@ -117,6 +117,16 @@
   - `lib/pages/setting/models/play_settings.dart`：新增「应用内悬浮窗控制」开关并同步 `AudioController`。
 - ⚠️ 沙箱无 Flutter SDK，**尚未跑 `flutter analyze`/编译**，需本地构建验证后再发布。
 
+### 2026-09-14 【修复】应用内悬浮窗不显示
+- 现象：返回后音乐能继续播，但右下角悬浮条完全不显示（与系统「显示在其他应用上层」权限无关，本悬浮窗是应用内叠加，不需要该权限）。
+- 根因：顶层 `AudioMiniPlayer` 在应用启动首次构建时会话尚未建立，`maybeInstance==null` 直接返回 `SizedBox.shrink()`，且它内部的 `Obx` 分支未被创建，之后无重建，悬浮窗永远隐藏。
+- 修复：新增 `AudioController.audioSessionActive`（静态 `RxBool`），`_updateCurrItem` 置 true、`_resetSession` 置 false；`AudioMiniPlayer.build` 改为从一开始就包裹在 `Obx` 中订阅该信号，会话激活即显示。
+- 涉及：`lib/pages/audio/controller.dart`、`lib/pages/audio/mini_player.dart`。已推送 `fork/main` @ `b87b0de96`，并重新触发不发 release 的构建。
+
+### 2026-09-14 【发布/构建偏好】只构建安卓端
+- 用户要求：以后构建**只做安卓端**，其他端（iOS/macOS/Windows/Linux）一律不构建。
+- 当前 `build.yml` 本就只有 `Release Android` 一个 job，满足要求；后续触发构建时保持只跑安卓即可，无需为其他端准备。
+
 ## 十、常用操作速查
 
 - 触发测试构建（不发 release）：POST `/repos/silverwolf-lv9999/PiliPlus/actions/workflows/build.yml/dispatches`，body 里 `tag:""`。
