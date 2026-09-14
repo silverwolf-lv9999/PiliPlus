@@ -23,10 +23,8 @@ import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -73,6 +71,7 @@ class _DownloadPanelState extends State<DownloadPanel> {
     (e) => e.code == Pref.defaultAudioQa,
     orElse: () => AudioQuality.k132,
   );
+  bool _merge = Pref.mergeDownload;
 
   @override
   void initState() {
@@ -117,7 +116,7 @@ class _DownloadPanelState extends State<DownloadPanel> {
         spacing: 16,
         children: [
           Text(
-            _audioOnly ? '音质' : '最高画质',
+            _audioOnly ? '音质' : '画质',
             style: textStyle,
           ),
           Builder(
@@ -200,22 +199,41 @@ class _DownloadPanelState extends State<DownloadPanel> {
               ),
             ),
           ),
-          if (kDebugMode || PlatformUtils.isMobile) ...[
-            const Spacer(),
-            StreamBuilder(
-              stream: Connectivity().onConnectivityChanged,
-              builder: (context, snapshot) {
-                if (snapshot.data case final data?) {
-                  final network = data.contains(ConnectivityResult.wifi)
-                      ? 'WIFI'
-                      : '数据';
-                  return Text('当前网络：$network', style: textStyle);
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-            const SizedBox(width: 4),
-          ],
+          if (!_audioOnly)
+            Builder(
+            builder: (context) {
+              final mergedDesc = _merge ? '合并缓存' : '分离缓存';
+              return PopupMenuButton<bool>(
+                initialValue: _merge,
+                onSelected: (value) {
+                  _merge = value;
+                  (context as Element).markNeedsBuild();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: false, child: Text('分离缓存')),
+                  const PopupMenuItem(value: true, child: Text('合并缓存')),
+                ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        mergedDesc,
+                        style: const TextStyle(height: 1),
+                        strutStyle: const StrutStyle(height: 1, leading: 0),
+                      ),
+                      Icon(
+                        size: 18,
+                        Icons.keyboard_arrow_down,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -345,6 +363,7 @@ class _DownloadPanelState extends State<DownloadPanel> {
             _quality,
             audioOnly: _audioOnly,
             audioQuality: _audioQuality,
+            merge: _merge,
           );
           break;
         case ugc.EpisodeItem episode:
@@ -355,6 +374,7 @@ class _DownloadPanelState extends State<DownloadPanel> {
             _quality,
             audioOnly: _audioOnly,
             audioQuality: _audioQuality,
+            merge: _merge,
           );
           break;
         case pgc.EpisodeItem episode:
@@ -365,6 +385,7 @@ class _DownloadPanelState extends State<DownloadPanel> {
             _quality,
             audioOnly: _audioOnly,
             audioQuality: _audioQuality,
+            merge: _merge,
           );
           break;
       }
