@@ -178,6 +178,17 @@ Commit Hash: ${BuildConfig.commitHash}''',
             title: const Text('Source Code'),
             subtitle: Text(Constants.sourceCodeUrl, style: subTitleStyle),
           ),
+          ListTile(
+            onTap: () => PageUtils.launchURL(
+              'https://github.com/silverwolf-lv9999/PiliPlus',
+            ),
+            leading: const Icon(Icons.fork_right),
+            title: const Text('我的版本仓库'),
+            subtitle: Text(
+              'https://github.com/silverwolf-lv9999/PiliPlus',
+              style: subTitleStyle,
+            ),
+          ),
           if (Platform.isAndroid)
             ListTile(
               onTap: PiliAndroidHelper.openLinkVerifySettings,

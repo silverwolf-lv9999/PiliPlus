@@ -8,11 +8,11 @@
     <h1>PiliPlus</h1>
 <div align="center">
     
-![GitHub repo size](https://img.shields.io/github/repo-size/bggRGjQaUbCoE/PiliPlus) 
-![GitHub Repo stars](https://img.shields.io/github/stars/bggRGjQaUbCoE/PiliPlus) 
-![GitHub all releases](https://img.shields.io/github/downloads/bggRGjQaUbCoE/PiliPlus/total) 
+![GitHub repo size](https://img.shields.io/github/repo-size/silverwolf-lv9999/PiliPlus) 
+![GitHub Repo stars](https://img.shields.io/github/stars/silverwolf-lv9999/PiliPlus) 
+![GitHub all releases](https://img.shields.io/github/downloads/silverwolf-lv9999/PiliPlus/total) 
 </div>
-    <p>使用Flutter开发的BiliBili第三方客户端</p>
+    <p>基于 PiliPlus 二次开发的 BiliBili 第三方客户端</p>
     
 <img src="assets/screenshots/510shots_so.png" width="32%" alt="home" />
 <img src="assets/screenshots/174shots_so.png" width="32%" alt="home" />
@@ -22,6 +22,18 @@
 <br/>
 </div>
 
+
+<br/>
+
+## 本 fork 新增功能
+
+- [x] **视频 TAG 屏蔽**：在设置中按视频 tag 过滤推荐/搜索结果
+- [x] **缓存「听视频」**：离线缓存支持仅音频播放，耳机可控播放/暂停、切换上下首
+- [x] **仅下载音频**：缓存时可只下载音频流，缓存列表以音质角标区分
+- [x] **自定义缓存路径**：可自定义缓存目录
+- [x] **安卓合并缓存**：按「哔哩终端」的方式，将 DASH 音画合并为单个 MP4 文件
+- [x] **播放列表排序**：本地缓存播放列表支持正序/倒序切换
+- [x] **下载面板优化**：顶部控件两行排布，仅下载音频时自动隐藏合并选项
 
 <br/>
 
@@ -221,9 +233,10 @@
 
 此项目（PiliPlus）是个人为了兴趣而开发，仅用于学习和测试，请于下载后24小时内删除。
 所用API皆从官方网站收集，不提供任何破解内容。
+本仓库是 [bggRGjQaUbCoE/PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus) 的二开版本，在其基础上新增了「视频 TAG 屏蔽、缓存听视频/仅下载音频、自定义缓存路径、安卓合并缓存」等功能，部分功能也向上游提交了 PR。
 在此致敬原作者：[guozhigq/pilipala](https://github.com/guozhigq/pilipala)
 在此致敬上游作者：[orz12/PiliPalaX](https://github.com/orz12/PiliPalaX)
-本仓库做了更激进的修改，感谢原作者的开源精神。
+感谢原作者与上游的开源精神。
 
 感谢使用
 
@@ -244,10 +257,10 @@
 
 ## Star History
 
-<a href="https://star-history.dera.page/#bggRGjQaUbCoE/PiliPlus&Date">
+<a href="https://star-history.dera.page/#silverwolf-lv9999/PiliPlus&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=bggRGjQaUbCoE/PiliPlus&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=bggRGjQaUbCoE/PiliPlus&type=Date" />
-   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=bggRGjQaUbCoE/PiliPlus&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=silverwolf-lv9999/PiliPlus&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=silverwolf-lv9999/PiliPlus&type=Date" />
+   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=silverwolf-lv9999/PiliPlus&type=Date" />
  </picture>
 </a>
