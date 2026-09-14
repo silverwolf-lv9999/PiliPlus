@@ -38,7 +38,6 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -231,7 +230,7 @@ class _AudioPageState extends State<AudioPage> {
 
   /// 应用内悬浮窗控制的明确开关（带文字说明，便于理解）。
   Widget _buildFloatSwitch({required bool center}) {
-    final colorScheme = ThemeUtils.theme.colorScheme;
+    final colorScheme = ColorScheme.of(context);
     return Obx(() {
       final on = _controller.enableFloat.value;
       final row = Row(

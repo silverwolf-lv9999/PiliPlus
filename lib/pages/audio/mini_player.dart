@@ -3,7 +3,6 @@ import 'dart:math' show max;
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/pages/audio/controller.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -48,7 +47,11 @@ class _AudioMiniPlayerState extends State<AudioMiniPlayer> {
       // 暂停状态下退出播放器也不显示悬浮窗
       if (!controller.playing.value) return const SizedBox.shrink();
 
-      final colorScheme = ThemeUtils.theme.colorScheme;
+      // 悬浮窗挂在 MaterialApp builder 顶层，不在软件 Theme 内部，
+      // 这里通过 Get.context(Navigator，位于主题内)取到正确主题色并跟随深色模式。
+      final theme = Get.context == null ? null : Theme.of(Get.context!);
+      if (theme == null) return const SizedBox.shrink();
+      final colorScheme = theme.colorScheme;
       final size = MediaQuery.sizeOf(context);
       final bottomPad = MediaQuery.paddingOf(context).bottom;
       _origin ??= Offset(
@@ -71,7 +74,7 @@ class _AudioMiniPlayerState extends State<AudioMiniPlayer> {
             _drag = Offset.zero;
           }),
           child: Theme(
-            data: ThemeUtils.theme,
+            data: theme,
             child: Material(
               elevation: 4,
               borderRadius: BorderRadius.circular(_h / 2),
@@ -96,11 +99,10 @@ class _AudioMiniPlayerState extends State<AudioMiniPlayer> {
                                 _title(controller),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: ThemeUtils.theme.textTheme.bodyMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface,
+                                ),
                               ),
                             ),
                           ],
