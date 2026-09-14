@@ -112,127 +112,143 @@ class _DownloadPanelState extends State<DownloadPanel> {
     final textStyle = TextStyle(color: theme.colorScheme.onSurfaceVariant);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 0, 12),
-      child: Row(
-        spacing: 16,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _audioOnly ? '音质' : '画质',
-            style: textStyle,
-          ),
-          Builder(
-            builder: (context) {
-              final Widget child = Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _audioOnly ? _audioQuality.desc : _quality.desc,
-                      style: const TextStyle(height: 1),
-                      strutStyle: const StrutStyle(height: 1, leading: 0),
-                    ),
-                    Icon(
-                      size: 18,
-                      Icons.keyboard_arrow_down,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ],
-                ),
-              );
-              if (_audioOnly) {
-                return PopupMenuButton<AudioQuality>(
-                  initialValue: _audioQuality,
-                  onSelected: (value) {
-                    _audioQuality = value;
-                    (context as Element).markNeedsBuild();
-                  },
-                  itemBuilder: (context) => AudioQuality.values
-                      .map(
-                        (e) => PopupMenuItem(
-                          value: e,
-                          child: Text(e.desc),
-                        ),
-                      )
-                      .toList(),
-                  child: child,
-                );
-              }
-              return PopupMenuButton<VideoQuality>(
-                initialValue: _quality,
-                onSelected: (value) {
-                  _quality = value;
-                  (context as Element).markNeedsBuild();
-                },
-                itemBuilder: (context) => VideoQuality.values
-                    .map(
-                      (e) => PopupMenuItem(
-                        value: e,
-                        child: Text(e.desc),
-                      ),
-                    )
-                    .toList(),
-                child: child,
-              );
-            },
-          ),
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onPressed: () => setState(() => _audioOnly = !_audioOnly),
-            icon: Icon(
-              _audioOnly ? Icons.check_box : Icons.check_box_outline_blank,
-              size: 16,
-              color: _audioOnly
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-            label: Text(
-              '仅下载音频',
-              style: TextStyle(
-                fontSize: 13,
-                color: _audioOnly
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
+          Row(
+            spacing: 16,
+            children: [
+              Text(
+                _audioOnly ? '音质' : '画质',
+                style: textStyle,
               ),
-            ),
-          ),
-          if (!_audioOnly)
-            Builder(
-            builder: (context) {
-              final mergedDesc = _merge ? '合并缓存' : '分离缓存';
-              return PopupMenuButton<bool>(
-                initialValue: _merge,
-                onSelected: (value) {
-                  _merge = value;
-                  (context as Element).markNeedsBuild();
+              Builder(
+                builder: (context) {
+                  final Widget child = Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _audioOnly ? _audioQuality.desc : _quality.desc,
+                          style: const TextStyle(height: 1),
+                          strutStyle: const StrutStyle(height: 1, leading: 0),
+                        ),
+                        Icon(
+                          size: 18,
+                          Icons.keyboard_arrow_down,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  );
+                  if (_audioOnly) {
+                    return PopupMenuButton<AudioQuality>(
+                      initialValue: _audioQuality,
+                      onSelected: (value) {
+                        _audioQuality = value;
+                        (context as Element).markNeedsBuild();
+                      },
+                      itemBuilder: (context) => AudioQuality.values
+                          .map(
+                            (e) => PopupMenuItem(
+                              value: e,
+                              child: Text(e.desc),
+                            ),
+                          )
+                          .toList(),
+                      child: child,
+                    );
+                  }
+                  return PopupMenuButton<VideoQuality>(
+                    initialValue: _quality,
+                    onSelected: (value) {
+                      _quality = value;
+                      (context as Element).markNeedsBuild();
+                    },
+                    itemBuilder: (context) => VideoQuality.values
+                        .map(
+                          (e) => PopupMenuItem(
+                            value: e,
+                            child: Text(e.desc),
+                          ),
+                        )
+                        .toList(),
+                    child: child,
+                  );
                 },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: false, child: Text('分离缓存')),
-                  const PopupMenuItem(value: true, child: Text('合并缓存')),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        mergedDesc,
-                        style: const TextStyle(height: 1),
-                        strutStyle: const StrutStyle(height: 1, leading: 0),
+              ),
+              if (!_audioOnly)
+                Builder(
+                  builder: (context) {
+                    final mergedDesc = _merge ? '合并缓存' : '分离缓存';
+                    return PopupMenuButton<bool>(
+                      initialValue: _merge,
+                      onSelected: (value) {
+                        _merge = value;
+                        (context as Element).markNeedsBuild();
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: false,
+                          child: Text('分离缓存'),
+                        ),
+                        const PopupMenuItem(
+                          value: true,
+                          child: Text('合并缓存'),
+                        ),
+                      ],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              mergedDesc,
+                              style: const TextStyle(height: 1),
+                              strutStyle: const StrutStyle(height: 1, leading: 0),
+                            ),
+                            Icon(
+                              size: 18,
+                              Icons.keyboard_arrow_down,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ],
+                        ),
                       ),
-                      Icon(
-                        size: 18,
-                        Icons.keyboard_arrow_down,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ],
+                    );
+                  },
+                ),
+            ],
+          ),
+          Row(
+            children: [
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => setState(() => _audioOnly = !_audioOnly),
+                icon: Icon(
+                  _audioOnly ? Icons.check_box : Icons.check_box_outline_blank,
+                  size: 16,
+                  color: _audioOnly
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                label: Text(
+                  '仅下载音频',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _audioOnly
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ],
       ),
