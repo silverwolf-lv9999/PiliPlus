@@ -5,6 +5,7 @@ import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/back_detector.dart';
 import 'package:PiliPlus/common/widgets/custom_toast.dart';
 import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
+import 'package:PiliPlus/pages/audio/mini_player.dart';
 import 'package:PiliPlus/common/widgets/scale_app.dart';
 import 'package:PiliPlus/common/widgets/scroll_behavior.dart';
 import 'package:PiliPlus/http/init.dart';
@@ -344,13 +345,19 @@ class MyApp extends StatelessWidget {
         child: child!,
       );
     }
+    Widget app;
     if (PlatformUtils.isDesktop) {
-      return BackDetector(
+      app = BackDetector(
         onBack: _onBack,
         child: child,
       );
+    } else {
+      app = child;
     }
-    return child;
+    // 全局叠加应用内音频悬浮窗（无可用于显示的音频时不占命中区域）
+    return Stack(
+      children: [app, const AudioMiniPlayer()],
+    );
   }
 
   /// from [DynamicColorBuilderState.initPlatformState]

@@ -96,15 +96,24 @@ extension _ListOrderExt on ListOrder {
 }
 
 class _AudioPageState extends State<AudioPage> {
-  final _controller = Get.put(
-    AudioController(),
-    tag: Utils.generateRandomString(8),
-  );
+  late final AudioController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AudioController.enter(Get.arguments);
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _controller.didChangeDependencies(context);
+  }
+
+  @override
+  void dispose() {
+    _controller.onAudioPageClosed();
+    super.dispose();
   }
 
   @override
@@ -115,6 +124,17 @@ class _AudioPageState extends State<AudioPage> {
     return SimpleScaffold(
       appBar: AppBar(
         actions: [
+          Obx(() {
+            final on = _controller.enableFloat.value;
+            return IconButton(
+              tooltip: on ? '应用内悬浮窗控制：已开启' : '应用内悬浮窗控制：已关闭',
+              onPressed: () => _controller.setEnableFloat(!on),
+              icon: Icon(
+                on ? Icons.picture_in_picture_alt : Icons.picture_in_picture_alt_outlined,
+                size: 22,
+              ),
+            );
+          }),
           if (_controller.isUgc && _controller.enableSponsorBlock)
             Obx(() {
               if (_controller.segmentProgressList.isNotEmpty) {

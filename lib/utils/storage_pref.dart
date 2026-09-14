@@ -677,6 +677,9 @@ abstract final class Pref {
   static bool get enableBackgroundPlay =>
       _setting.get(SettingBoxKey.enableBackgroundPlay, defaultValue: true);
 
+  static bool get enableAppFloatAudio =>
+      _setting.get(SettingBoxKey.enableAppFloatAudio, defaultValue: false);
+
   static bool get disableLikeMsg =>
       _setting.get(SettingBoxKey.disableLikeMsg, defaultValue: false);
 
