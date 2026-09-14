@@ -3,7 +3,6 @@ import 'dart:io' show Platform;
 import 'package:PiliPlus/common/widgets/custom_icon.dart';
 import 'package:PiliPlus/models/common/super_chat_type.dart';
 import 'package:PiliPlus/models/common/video/subtitle_pref_type.dart';
-import 'package:PiliPlus/pages/audio/controller.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
 import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:PiliPlus/pages/setting/pages/fullscreen_sc_size.dart';
@@ -58,15 +57,6 @@ List<SettingsModel> get playSettings => [
     leading: Icon(Icons.motion_photos_auto_outlined),
     setKey: SettingBoxKey.autoPlayEnable,
     defaultVal: false,
-  ),
-  SwitchModel(
-    title: '应用内悬浮窗控制',
-    subtitle: '返回上一页继续播放音频，并通过应用内可拖动悬浮条控制',
-    leading: const Icon(Icons.picture_in_picture_alt_outlined),
-    setKey: SettingBoxKey.enableAppFloatAudio,
-    defaultVal: false,
-    onChanged: (value) =>
-        AudioController.maybeInstance?.setEnableFloat(value),
   ),
   const SwitchModel(
     title: '全屏显示锁定按钮',

@@ -76,53 +76,11 @@ class AudioController extends GetxController
   late List<Int64> subId;
   late int itemType;
   Int64? extraId;
-  late PlaylistSource from;
+  late final PlaylistSource from;
   @override
   late final bool isUgc = itemType == 1;
 
   final audioItem = Rxn<DetailItem>();
-
-  /// 全局播放会话的固定 tag：使播放器/曲目不随页面返回而销毁。
-  static const String sessionTag = 'audioFloatSession';
-
-  /// 是否有活跃的音频播放会话（独立于控制器实例存在，供顶层悬浮窗订阅，
-  /// 避免悬浮窗在会话尚未建立时构建导致永远不会显示）。
-  static final audioSessionActive = RxBool(false);
-
-  /// 是否正停留在音乐播放器界面；为 true 时不显示悬浮窗。
-  static final audioPageOpen = RxBool(false);
-
-  /// 应用内悬浮窗控制开关（响应式，供悬浮窗及开关实时联动）。
-  final enableFloat = RxBool(Pref.enableAppFloatAudio);
-
-  void setEnableFloat(bool value) {
-    enableFloat.value = value;
-    GStorage.setting.put(SettingBoxKey.enableAppFloatAudio, value);
-  }
-
-  /// 是否已存在全局播放会话。
-  static AudioController? get maybeInstance =>
-      Get.isRegistered<AudioController>(tag: sessionTag)
-          ? Get.find<AudioController>(tag: sessionTag)
-          : null;
-
-  /// 获取（必要时创建）全局播放会话。
-  static AudioController get instance => maybeInstance ??
-      Get.put(AudioController(), tag: sessionTag, permanent: true);
-
-  /// 由 AudioPage 进入（或复用）一个播放会话。
-  static AudioController enter(Map args) {
-    final existing = maybeInstance;
-    if (existing != null) {
-      existing.enterSession(args);
-      return existing;
-    }
-    return instance; // onInit 里会以 Get.arguments 初始化
-  }
-
-  bool _sessionInitialized = false;
-  Map? _lastArgs;
-  String _activeSessionKey = '';
 
   /// 本地缓存音频播放模式（离线缓存进入，不联网）。
   bool isLocal = false;
@@ -139,7 +97,6 @@ class AudioController extends GetxController
   late bool isDragging = false;
   final RxInt position = RxInt(0);
   final RxInt duration = RxInt(0);
-  final playing = RxBool(false);
 
   late final AnimationController animController;
 
@@ -195,51 +152,25 @@ class AudioController extends GetxController
   @override
   void onInit() {
     super.onInit();
-    // 仅创建一次的全局配置/资源
-    videoPlayerServiceHandler
-      ?..onPlay = onPlay
-      ..onPause = onPause
-      ..onSeek = onSeek
-      ..onSkipToNext = onHeadsetNext
-      ..onSkipToPrevious = onHeadsetPrevious;
-
-    animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-
-    if (shutdownTimerService.isActive) {
-      shutdownTimerService
-        ..onPause = onPause
-        ..isPlaying = isPlaying;
+    final args = Get.arguments;
+    oid = Int64(args['oid']);
+    final id = args['id'];
+    this.id = id != null ? Int64(id) : oid;
+    subId = (args['subId'] as List<int>?)?.map(Int64.new).toList() ?? [oid];
+    itemType = args['itemType'];
+    from = args['from'];
+    _start = args['start'];
+    final int? extraId = args['extraId'];
+    if (extraId != null) {
+      this.extraId = Int64(extraId);
+    }
+    if (args['heroTag'] case String heroTag) {
+      try {
+        _videoDetailController = Get.find<VideoDetailController>(tag: heroTag);
+      } catch (_) {}
     }
 
-    enterSession(Get.arguments);
-  }
-
-  /// 会话唯一标识：用于判断「返回再进入」时是否为同一播放会话，避免重复初始化。
-  static String _sessionKey(Map args) {
-    final id = args['id']?.toString() ?? '';
-    final oid = args['oid']?.toString() ?? '';
-    final itemType = args['itemType']?.toString() ?? '';
-    final isLocal = args['isLocal'] == true;
-    final audioUrl = args['audioUrl']?.toString() ?? '';
-    return '$id|$oid|$itemType|$isLocal|$audioUrl';
-  }
-
-  /// 进入（或复用）一个播放会话：
-  /// - 相同会话（如从悬浮窗/同曲目返回）直接复用，不打断播放；
-  /// - 不同会话则重置并重新初始化，复用同一个媒体播放器实例。
-  void enterSession(Map args) {
-    _lastArgs = args;
-    final key = _sessionKey(args);
-    if (key == _activeSessionKey && _sessionInitialized) {
-      return; // 复用当前会话
-    }
-    _activeSessionKey = key;
-    _resetSession();
-    _parseArgs(args);
-
+    isLocal = args['isLocal'] == true;
     final String? audioUrl = args['audioUrl'];
     final hasAudioUrl = audioUrl != null;
     if (isLocal) {
@@ -263,78 +194,23 @@ class AudioController extends GetxController
         }
       });
     }
-    _sessionInitialized = true;
-  }
+    videoPlayerServiceHandler
+      ?..onPlay = onPlay
+      ..onPause = onPause
+      ..onSeek = onSeek
+      ..onSkipToNext = onHeadsetNext
+      ..onSkipToPrevious = onHeadsetPrevious;
 
-  /// 根据导航参数填充本会话所需字段。
-  void _parseArgs(Map args) {
-    oid = Int64(args['oid']);
-    final id = args['id'];
-    this.id = id != null ? Int64(id) : oid;
-    subId = (args['subId'] as List<int>?)?.map(Int64.new).toList() ?? [oid];
-    itemType = args['itemType'];
-    from = args['from'];
-    _start = args['start'];
-    final int? extraId = args['extraId'];
-    if (extraId != null) {
-      this.extraId = Int64(extraId);
+    animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    if (shutdownTimerService.isActive) {
+      shutdownTimerService
+        ..onPause = onPause
+        ..isPlaying = isPlaying;
     }
-    if (args['heroTag'] case String heroTag) {
-      try {
-        _videoDetailController = Get.find<VideoDetailController>(tag: heroTag);
-      } catch (_) {}
-    }
-    isLocal = args['isLocal'] == true;
-  }
-
-  /// 重置为「新会话」状态（保留媒体播放器/资源，仅清空会话数据）。
-  void _resetSession() {
-    audioItem.value = null;
-    audioSessionActive.value = false;
-    playing.value = false;
-    hasLike.value = false;
-    coinNum.value = 0;
-    hasFav.value = false;
-    position.value = 0;
-    duration.value = 0;
-    index = null;
-    playlist = null;
-    _prev = null;
-    _next = null;
-    _localEntries = null;
-    _localFileUrls = null;
-    order = ListOrder.ORDER_NORMAL;
-    speed = 1.0;
-    _videoDetailController = null;
-    _lastVolume = null;
-  }
-
-  /// AudioPage 返回（页面 dispose）时调用：
-  /// - 功能开启：保持播放，交由应用内悬浮窗控制；
-  /// - 功能关闭：停止播放并复位（还原为「返回即停止」的旧行为）。
-  void onAudioPageClosed() {
-    if (enableFloat.value) return;
-    stopAndReset();
-  }
-
-  /// 彻底停止当前播放并复位会话（释放播放器资源）。
-  void stopAndReset() {
-    _subscriptions?.forEach((e) => e.cancel());
-    _subscriptions?.clear();
-    _subscriptions = null;
-    player?.dispose();
-    player = null;
-    _hasInit = false;
-    _resetSession();
-    _sessionInitialized = false;
-    _activeSessionKey = '';
-  }
-
-  /// 供悬浮窗「点击回到播放器」使用：用最近一次参数重新进入播放页。
-  void reopen() {
-    final args = _lastArgs;
-    if (args == null) return;
-    Get.toNamed('/audio', arguments: Map.of(args));
   }
 
   bool isPlaying() {
@@ -360,7 +236,6 @@ class AudioController extends GetxController
 
   void _updateCurrItem(DetailItem item) {
     audioItem.value = item;
-    audioSessionActive.value = true;
     hasLike.value = item.stat.hasLike_7;
     coinNum.value = item.stat.hasCoin_8 ? 2 : 0;
     hasFav.value = item.stat.hasFav;
@@ -660,7 +535,6 @@ class AudioController extends GetxController
         this.duration.value = duration.inSeconds;
       }),
       stream.playing.listen((playing) {
-        this.playing.value = playing;
         final PlayerStatus playerStatus;
         if (playing) {
           animController.forward();

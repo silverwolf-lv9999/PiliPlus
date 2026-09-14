@@ -135,6 +135,13 @@
 - 已把 `.github/workflows/build.yml` 中 `build_ios/build_mac/build_win_x64/build_linux_x64` 的输入默认值从 `true` 改为 `false`（仅 `build_android` 默认 `true`），并已推送。以后 web 手动触发或其他 dispatch 默认只构建安卓。
 - 触发时不发 release 用 `tag:""`；如需显式只安卓，可带 `build_android:true`（其余不传即可，因已默认 false）。
 
+### 2026-09-14 【回退】移除「应用内返回不停止音频 + 悬浮窗控制」功能
+- 用户决定：该功能 bug 太多，整体回退不要了。
+- 已将下列文件还原到基线 `4d0846717`（功能开发前状态），并删除新增的 `lib/pages/audio/mini_player.dart`：
+  - `lib/main.dart`、`lib/pages/audio/controller.dart`、`lib/pages/audio/view.dart`、`lib/pages/setting/models/play_settings.dart`、`lib/utils/storage_key.dart`、`lib/utils/storage_pref.dart`
+- **保留**：`.github/workflows/build.yml` 的「仅安卓端默认构建」改动与上文构建偏好记录（与悬浮窗功能无关，用户明确要保留）。
+- 功能相关历史提交仍存在于 `fork/main` 提交记录中（作为逆操作的还原提交保留，不删除历史）。
+
 ## 十、常用操作速查
 
 - 触发测试构建（不发 release）：POST `/repos/silverwolf-lv9999/PiliPlus/actions/workflows/build.yml/dispatches`，body 里 `tag:""`。

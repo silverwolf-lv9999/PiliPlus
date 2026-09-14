@@ -96,26 +96,15 @@ extension _ListOrderExt on ListOrder {
 }
 
 class _AudioPageState extends State<AudioPage> {
-  late final AudioController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AudioController.enter(Get.arguments);
-    AudioController.audioPageOpen.value = true;
-  }
+  final _controller = Get.put(
+    AudioController(),
+    tag: Utils.generateRandomString(8),
+  );
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _controller.didChangeDependencies(context);
-  }
-
-  @override
-  void dispose() {
-    AudioController.audioPageOpen.value = false;
-    _controller.onAudioPageClosed();
-    super.dispose();
   }
 
   @override
@@ -191,8 +180,6 @@ class _AudioPageState extends State<AudioPage> {
                   _buildProgressBar(colorScheme),
                   _buildDuration(colorScheme),
                   _buildControls(),
-                  const SizedBox(height: 6),
-                  _buildFloatSwitch(center: true),
                 ],
               )
             : Row(
@@ -217,8 +204,6 @@ class _AudioPageState extends State<AudioPage> {
                         _buildProgressBar(colorScheme),
                         _buildDuration(colorScheme),
                         _buildControls(),
-                        const SizedBox(height: 6),
-                        _buildFloatSwitch(center: false),
                       ],
                     ),
                   ),
@@ -226,38 +211,6 @@ class _AudioPageState extends State<AudioPage> {
               ),
       ),
     );
-  }
-
-  /// 应用内悬浮窗控制的明确开关（带文字说明，便于理解）。
-  Widget _buildFloatSwitch({required bool center}) {
-    final colorScheme = ColorScheme.of(context);
-    return Obx(() {
-      final on = _controller.enableFloat.value;
-      final row = Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: center ? MainAxisAlignment.center : MainAxisAlignment.start,
-        children: [
-          Icon(
-            on ? Icons.picture_in_picture_alt : Icons.picture_in_picture_alt_outlined,
-            size: 18,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '应用内悬浮窗',
-            style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
-          ),
-          const SizedBox(width: 6),
-          Switch(
-            value: on,
-            onChanged: _controller.setEnableFloat,
-          ),
-        ],
-      );
-      return center
-          ? Center(child: row)
-          : Tooltip(message: '返回上一页继续播放并可通过悬浮条控制', child: row);
-    });
   }
 
   void _showPlaylist() {
