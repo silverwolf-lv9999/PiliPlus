@@ -132,7 +132,8 @@
 
 ### 2026-09-14 【发布/构建偏好】只构建安卓端
 - 用户要求：以后构建**只做安卓端**，其他端（iOS/macOS/Windows/Linux）一律不构建。
-- 当前 `build.yml` 本就只有 `Release Android` 一个 job，满足要求；后续触发构建时保持只跑安卓即可，无需为其他端准备。
+- 已把 `.github/workflows/build.yml` 中 `build_ios/build_mac/build_win_x64/build_linux_x64` 的输入默认值从 `true` 改为 `false`（仅 `build_android` 默认 `true`），并已推送。以后 web 手动触发或其他 dispatch 默认只构建安卓。
+- 触发时不发 release 用 `tag:""`；如需显式只安卓，可带 `build_android:true`（其余不传即可，因已默认 false）。
 
 ## 十、常用操作速查
 
