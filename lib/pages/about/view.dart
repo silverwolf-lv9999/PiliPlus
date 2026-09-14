@@ -183,7 +183,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
               'https://github.com/silverwolf-lv9999/PiliPlus',
             ),
             leading: const Icon(Icons.fork_right),
-            title: const Text('我的版本仓库'),
+            title: const Text('本 fork 仓库'),
             subtitle: Text(
               'https://github.com/silverwolf-lv9999/PiliPlus',
               style: subTitleStyle,
