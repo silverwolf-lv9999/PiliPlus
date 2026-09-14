@@ -75,6 +75,8 @@ app.*.map.json
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 *.jks
+# 本地签名/密钥，切勿提交
+.signing/
 
 # iOS/XCode related
 **/ios/**/*.mode1v3

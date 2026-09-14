@@ -17,6 +17,12 @@ on:
                 default: true
                 type: boolean
 
+            app_version:
+                description: "应用内版本号（如 2.1.4.2），留空则用上游版本+提交hash"
+                required: false
+                default: ""
+                type: string
+
             build_ios:
                 description: "Build iOS"
                 required: false
@@ -96,7 +102,7 @@ jobs:
             - name: Set and Extract version
               if: ${{ github.event_name == 'workflow_dispatch' }}
               shell: pwsh
-              run: lib/scripts/build.ps1 android
+              run: lib/scripts/build.ps1 android "${{ github.event.inputs.app_version }}"
 
             - name: Flutter Build Release Apk
               if: ${{ github.event_name == 'workflow_dispatch' }}

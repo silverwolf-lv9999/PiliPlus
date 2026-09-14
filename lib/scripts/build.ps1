@@ -1,5 +1,6 @@
 param(
-    [string]$Arg = ''
+    [string]$Arg = '',
+    [string]$VersionOverride = ''
 )
 
 try {
@@ -11,9 +12,15 @@ try {
 
     $updatedContent = foreach ($line in (Get-Content -Path 'pubspec.yaml' -Encoding UTF8)) {
         if ($line -match '^\s*version:\s*([\d\.]+)') {
-            $versionName = $matches[1]
-            if ($Arg -eq 'android') {
-                $versionName += '-' + $commitHash.Substring(0, 9)
+            if ($VersionOverride -ne '') {
+                # 显式指定的 fork 版本号（如 2.1.4.2），应用于应用内显示
+                $versionName = $VersionOverride
+            }
+            else {
+                $versionName = $matches[1]
+                if ($Arg -eq 'android') {
+                    $versionName += '-' + $commitHash.Substring(0, 9)
+                }
             }
             "version: $versionName+$versionCode"
         }
