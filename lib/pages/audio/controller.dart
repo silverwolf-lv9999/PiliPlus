@@ -89,6 +89,9 @@ class AudioController extends GetxController
   /// 避免悬浮窗在会话尚未建立时构建导致永远不会显示）。
   static final audioSessionActive = RxBool(false);
 
+  /// 是否正停留在音乐播放器界面；为 true 时不显示悬浮窗。
+  static final audioPageOpen = RxBool(false);
+
   /// 应用内悬浮窗控制开关（响应式，供悬浮窗及开关实时联动）。
   final enableFloat = RxBool(Pref.enableAppFloatAudio);
 

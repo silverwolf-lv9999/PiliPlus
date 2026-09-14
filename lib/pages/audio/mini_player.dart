@@ -3,6 +3,7 @@ import 'dart:math' show max;
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/pages/audio/controller.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -37,10 +38,17 @@ class _AudioMiniPlayerState extends State<AudioMiniPlayer> {
       }
       final controller = AudioController.maybeInstance;
       if (controller == null) return const SizedBox.shrink();
+      // 音乐播放器界面内不显示悬浮窗，返回出去后才显示
+      if (AudioController.audioPageOpen.value) {
+        return const SizedBox.shrink();
+      }
       if (!controller.enableFloat.value) return const SizedBox.shrink();
       final item = controller.audioItem.value;
       if (item == null) return const SizedBox.shrink();
+      // 暂停状态下退出播放器也不显示悬浮窗
+      if (!controller.playing.value) return const SizedBox.shrink();
 
+      final colorScheme = ThemeUtils.theme.colorScheme;
       final size = MediaQuery.sizeOf(context);
       final bottomPad = MediaQuery.paddingOf(context).bottom;
       _origin ??= Offset(
@@ -62,57 +70,63 @@ class _AudioMiniPlayerState extends State<AudioMiniPlayer> {
             _origin = Offset(left, top);
             _drag = Offset.zero;
           }),
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(_h / 2),
-            color: ColorScheme.of(context).surfaceContainerHigh,
-            child: SizedBox(
-              width: _w,
-              height: _h,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: controller.reopen,
-                      borderRadius: BorderRadius.horizontal(
-                        left: const Radius.circular(_h / 2),
-                      ),
-                      child: Row(
-                        children: [
-                          _cover(controller),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _title(controller),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
+          child: Theme(
+            data: ThemeUtils.theme,
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(_h / 2),
+              color: colorScheme.surfaceContainerHigh,
+              child: SizedBox(
+                width: _w,
+                height: _h,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: controller.reopen,
+                        borderRadius: BorderRadius.horizontal(
+                          left: const Radius.circular(_h / 2),
+                        ),
+                        child: Row(
+                          children: [
+                            _cover(controller, colorScheme),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _title(controller),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: ThemeUtils.theme.textTheme.bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurface,
+                                    ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  _iconBtn(
-                    context,
-                    Icons.skip_previous,
-                    controller.onHeadsetPrevious,
-                  ),
-                  _iconBtn(
-                    context,
-                    controller.playing.value ? Icons.pause : Icons.play_arrow,
-                    controller.playOrPause,
-                  ),
-                  _iconBtn(
-                    context,
-                    Icons.skip_next,
-                    controller.onHeadsetNext,
-                  ),
-                  const SizedBox(width: 6),
-                ],
+                    _iconBtn(
+                      context,
+                      Icons.skip_previous,
+                      controller.onHeadsetPrevious,
+                    ),
+                    _iconBtn(
+                      context,
+                      controller.playing.value
+                          ? Icons.pause
+                          : Icons.play_arrow,
+                      controller.playOrPause,
+                    ),
+                    _iconBtn(
+                      context,
+                      Icons.skip_next,
+                      controller.onHeadsetNext,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                ),
               ),
             ),
           ),
@@ -121,19 +135,19 @@ class _AudioMiniPlayerState extends State<AudioMiniPlayer> {
     });
   }
 
-  Widget _cover(AudioController c) {
+  Widget _cover(AudioController c, ColorScheme colorScheme) {
     final cover = c.audioItem.value?.arc.cover;
     if (cover == null || cover.isEmpty) {
       return Container(
         width: _h,
         height: _h,
         decoration: BoxDecoration(
-          color: ColorScheme.of(context).surfaceContainerHighest,
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.horizontal(
             left: const Radius.circular(_h / 2),
           ),
         ),
-        child: const Icon(Icons.music_note),
+        child: Icon(Icons.music_note, color: colorScheme.onSurface),
       );
     }
     return NetworkImgLayer(

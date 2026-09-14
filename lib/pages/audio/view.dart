@@ -38,6 +38,7 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -102,6 +103,7 @@ class _AudioPageState extends State<AudioPage> {
   void initState() {
     super.initState();
     _controller = AudioController.enter(Get.arguments);
+    AudioController.audioPageOpen.value = true;
   }
 
   @override
@@ -112,6 +114,7 @@ class _AudioPageState extends State<AudioPage> {
 
   @override
   void dispose() {
+    AudioController.audioPageOpen.value = false;
     _controller.onAudioPageClosed();
     super.dispose();
   }
@@ -124,17 +127,6 @@ class _AudioPageState extends State<AudioPage> {
     return SimpleScaffold(
       appBar: AppBar(
         actions: [
-          Obx(() {
-            final on = _controller.enableFloat.value;
-            return IconButton(
-              tooltip: on ? '应用内悬浮窗控制：已开启' : '应用内悬浮窗控制：已关闭',
-              onPressed: () => _controller.setEnableFloat(!on),
-              icon: Icon(
-                on ? Icons.picture_in_picture_alt : Icons.picture_in_picture_alt_outlined,
-                size: 22,
-              ),
-            );
-          }),
           if (_controller.isUgc && _controller.enableSponsorBlock)
             Obx(() {
               if (_controller.segmentProgressList.isNotEmpty) {
@@ -200,6 +192,8 @@ class _AudioPageState extends State<AudioPage> {
                   _buildProgressBar(colorScheme),
                   _buildDuration(colorScheme),
                   _buildControls(),
+                  const SizedBox(height: 6),
+                  _buildFloatSwitch(center: true),
                 ],
               )
             : Row(
@@ -224,6 +218,8 @@ class _AudioPageState extends State<AudioPage> {
                         _buildProgressBar(colorScheme),
                         _buildDuration(colorScheme),
                         _buildControls(),
+                        const SizedBox(height: 6),
+                        _buildFloatSwitch(center: false),
                       ],
                     ),
                   ),
@@ -231,6 +227,38 @@ class _AudioPageState extends State<AudioPage> {
               ),
       ),
     );
+  }
+
+  /// 应用内悬浮窗控制的明确开关（带文字说明，便于理解）。
+  Widget _buildFloatSwitch({required bool center}) {
+    final colorScheme = ThemeUtils.theme.colorScheme;
+    return Obx(() {
+      final on = _controller.enableFloat.value;
+      final row = Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: center ? MainAxisAlignment.center : MainAxisAlignment.start,
+        children: [
+          Icon(
+            on ? Icons.picture_in_picture_alt : Icons.picture_in_picture_alt_outlined,
+            size: 18,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '应用内悬浮窗',
+            style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+          ),
+          const SizedBox(width: 6),
+          Switch(
+            value: on,
+            onChanged: _controller.setEnableFloat,
+          ),
+        ],
+      );
+      return center
+          ? Center(child: row)
+          : Tooltip(message: '返回上一页继续播放并可通过悬浮条控制', child: row);
+    });
   }
 
   void _showPlaylist() {

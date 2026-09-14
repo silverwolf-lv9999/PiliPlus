@@ -123,6 +123,13 @@
 - 修复：新增 `AudioController.audioSessionActive`（静态 `RxBool`），`_updateCurrItem` 置 true、`_resetSession` 置 false；`AudioMiniPlayer.build` 改为从一开始就包裹在 `Obx` 中订阅该信号，会话激活即显示。
 - 涉及：`lib/pages/audio/controller.dart`、`lib/pages/audio/mini_player.dart`。已推送 `fork/main` @ `b87b0de96`，并重新触发不发 release 的构建。
 
+### 2026-09-14 【优化】悬浮窗深色模式/可读性 + 播放器内隐藏 + 暂停退出不显示 + 开关直白
+- 深色模式取色：悬浮窗先前用 `ColorScheme.of(context)`，取到 MaterialApp builder 外层默认亮色主题导致白底白字；改为 `ThemeUtils.theme.colorScheme`，并整体包 `Theme(data: ThemeUtils.theme)`，图标/文字跟随主题。
+- 播放器界面内隐藏悬浮窗：新增 `AudioController.audioPageOpen`(RxBool)，`audio/view.dart` initState 置 true、dispose 置 false；mini_player 在 true 时不显示。
+- 暂停退出不显示：mini_player 增加 `!controller.playing.value` 时不显示。
+- 开关更直白：AppBar 图标开关删除（防溢出），改为播放器页底部带文字「应用内悬浮窗」+Switch 的 `_buildFloatSwitch`（横竖屏皆显示）。
+- 涉及：`lib/pages/audio/controller.dart`、`lib/pages/audio/mini_player.dart`、`lib/pages/audio/view.dart`。
+
 ### 2026-09-14 【发布/构建偏好】只构建安卓端
 - 用户要求：以后构建**只做安卓端**，其他端（iOS/macOS/Windows/Linux）一律不构建。
 - 当前 `build.yml` 本就只有 `Release Android` 一个 job，满足要求；后续触发构建时保持只跑安卓即可，无需为其他端准备。
