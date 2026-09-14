@@ -42,7 +42,9 @@
 - 工作流用法：`workflow_dispatch`，参数：
   - `ref`：分支（发布用 `main`）
   - `tag`：**为空 = 只出 artifact，不创建 release**；**非空 = 创建 release**。
-  - 测试阶段 `tag=""`，不发 release。
+  - `app_version`：**应用内版本号**（如 `2.1.4.2`），传给 `build.ps1` 覆盖 `pili.name`；留空则用上游版本+提交 hash。
+  - 测试阶段 `tag=""`，不发 release；发布时同时传 `app_version=<版本号>` 和 `tag=<tag>`。
+- **签名（自 2.1.4.2 起）**：不用 debug 签名，用本地 `.signing/release_keystore.jks`（alias `piliplus`）。CI 通过 `SIGN_KEYSTORE_BASE64`/`KEYSTORE_PASSWORD`/`KEY_ALIAS`/`KEY_PASSWORD` 4 个 secrets 解码并配置签名；本机 build.gradle.kts 若存在 `android/key.properties` 也会用 release 签名。
 - **版本命名规范（用户要求）**：`上游版本号.X`，其中 X = 相对官方版本的第几次发布。例：基于官方 2.1.4 → `2.1.4.1`、`2.1.4.2`。
 - **更新日志要求**：写“本次 release 相比上一次 release 改了什么”，不要罗列历史累积的所有功能。
 - 发布后需 `PATCH` release 改 `name`（默认是 tag 名）并写 `body`（更新日志）。
@@ -65,16 +67,26 @@
 
 - `main`＝`test/cache-tag-combined` 均指向最新完整版（含上表全部功能 + 状态命令如 AndroidHelper.mergeM4sToMp4 等）。
 - Release 已规范化：`2.1.3.2~2.1.3.7`（基于官方 2.1.3）、`2.1.4.1~2.1.4.2`（基于官方 2.1.4）。翻译版 2.1.3.1 已删除。
-- 个人仓库 token：需要时向用户索取（GitHub PAT，repo+actions 权限）。
+- 最新：`2.1.4.2`（tag `v2.1.4.2`）改用**正式 release 签名**（非 debug），并支持**应用内版本号显示 `2.1.4.2`**。
+- 个人仓库 token：需要时向用户索取（GitHub PAT，repo+actions 权限）。签名/口令存于本地 `.signing/`（已 gitignore）。
 
 ## 九、更新 / 修改日志
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
-### 2026-09-14 发布：`2.1.4.2`（tag `v2.1.4-fork-full`）
+### 2026-09-14 【正式签名 + 应用内版本号】重新发布 `2.1.4.2`（tag `v2.1.4.2`）
+- 背景：应用内版本号需显示 `.X` 后缀（如 `2.1.4.2`）；并且不再用 debug 签名，改用本地新生成的 release 签名。
+- **新签名**：用 `keytool` 生成 `.signing/release_keystore.jks`（alias `piliplus`），口令存于 `.signing/keystore.env`（两者均已加入 `.gitignore`，切勿提交）。
+- **CI 接入**：在 `silverwolf-lv9999/PiliPlus` 仓库配置了 4 个 Actions secrets：`SIGN_KEYSTORE_BASE64`（keystore 的 base64）、`KEYSTORE_PASSWORD`、`KEY_PASSWORD`、`KEY_ALIAS=piliplus`。`.github/workflows/build.yml` 的「Write key」步骤会自动解码生成 `android/app/key.jks` 并写入 `android/key.properties`，`build.gradle.kts` 读到即用 release 签名（非 debug）。
+- **版本号覆盖**：`lib/scripts/build.ps1` 新增 `VersionOverride` 参数；`build.yml` 新增 `app_version` 输入（如 `2.1.4.2`）传给构建脚本，`pili.name` 即应用内版本号。发布时传 `app_version=2.1.4.2`。
+- 本次改动提交：`fork/main` @ `22ee85310`。
+- **发布动作**：删除旧 `2.1.4.2`（release+tag `v2.1.4-fork-full`），触发 Android 构建（run/action 号 34837045416，仅安卓，其余端 skipped），release 名 `2.1.4.2`、tag `v2.1.4.2`。APK 名含 `2.1.4.2+5381`。
+- **签名校验**：下载 arm64 APK，`keytool -printcert` 的 SHA256 指纹 `6F:62:B5:03:...` 与 `.signing/release_keystore.jks` 完全一致，确认用的是新 release 签名。
+
+### 2026-09-14 发布：`2.1.4.2`（旧版，tag `v2.1.4-fork-full`，已删除）
 - 相对 2.1.4.1 新增：自定义缓存模式（合并/分离缓存 + 自定义缓存目录）；安卓合并缓存（DASH 音画本地合成为单个 MP4）。
 - 改进：下载面板顶部两行排布，「仅下载音频」放第二行；仅下载音频时自动隐藏「合并/分离缓存」、画质自动切音质；画质文案调整、移除「当前网络」；关于页新增「本 fork 仓库」链接。
-- 构建来源：`fork/main` @ `4d0846717`。
+- 构建来源：`fork/main` @ `4d0846717`。**该 release 后来按用户要求删除并改用新签名重建为 tag `v2.1.4.2`（见上条）。**
 
 ### 2026-09-14 发布：`2.1.4.1`（tag `v2.1.4-cache-tag`）
 - 同步官方 PiliPlus v2.1.4 全部更新，保留视频 TAG 屏蔽与缓存听视频/仅下载音频功能。
@@ -145,6 +157,6 @@
 ## 十、常用操作速查
 
 - 触发测试构建（不发 release）：POST `/repos/silverwolf-lv9999/PiliPlus/actions/workflows/build.yml/dispatches`，body 里 `tag:""`。
-- 触发发布构建：同上，`tag:"v2.1.4-fork-full"`（tag 名自定）。
+- 触发发布构建：同上，`tag:"v2.1.4.2"` 且带 `app_version:"2.1.4.2"`（tag 名自定，建议与版本号一致）。
 - 查 run 状态 / 列 artifact / 下载 artifact：用 releases 与 actions 接口，需 token。
 - 改 `lib/pages/about/view.dart` 关于页；README 在仓库根；两部分改完都要重现构建 APK 才会生效。
