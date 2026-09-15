@@ -8,7 +8,8 @@
 ## 一、仓库与身份
 
 - 上游官方仓库（origin）：`bggRGjQaUbCoE/PiliPlus`
-- 用户个人仓库（fork）：`silverwolf-lv9999/PiliPlus`
+- 用户个人仓库（fork）：`silverwolf-lv9999/PiliPlus`（即 PiliMax 二开版，应用显示名已改为 **PiliMax**）
+- **PR 专项仓库**：`silverwolf-lv9999/PiliUpstream` — 专门用于向上游提 PR 的干净基线仓库，含 `main`（上游基线）+ `pr/*`（PR 分支）。
 - 这是对官方 PiliPlus 的二次开发版，目标是把自研功能并入个人仓库的 `main`。
 
 ### ⚠️ 最关键一句话：「主项目」
@@ -74,6 +75,25 @@
 ## 九、更新 / 修改日志
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
+
+### 2026-09-15 【改名】应用显示名 PiliPlus → PiliMax（仅显示名，不动包名/import）
+- 用户确认：**只改显示名**（界面/桌面/关于显示的 app 名称），Dart 包名、`package:PiliPlus/` import（881 文件）、Android applicationId `com.example.piliplus`、源码目录一律不改，降低风险。
+- 改动：
+  - `lib/common/constants.dart`：`appName = 'PiliMax'`。
+  - `android/.../main/res/values/string.xml`、`debug/res/values/string.xml`：`app_name` → PiliMax / PiliMax debug。
+  - `android/.../main/AndroidManifest.xml`：两处 `intent-filter android:label` → PiliMax。
+  - `ios/Runner/Info.plist`：`CFBundleDisplayName`/`CFBundleName` → PiliMax。
+  - `README.md`：标题 → PiliMax。
+- 提交：`fork/main` @ `f211adbff`。
+- ⚠️ 应用内关于页版本号/版本名、APK 名仍走 `build.ps1` + `--build-name`，不受本次改名影响；Android 系统版本名/包名保持不变。
+
+### 2026-09-15 【PR专项仓库】新建 `silverwolf-lv9999/PiliUpstream`
+- 用途：专门用于向上游 `bggRGjQaUbCoE/PiliPlus` 提 PR 的**干净基线仓库**，不含 PiliMax 自研功能。
+- 内容：`main`＝上游最新（`455254ee6` 之上追加 README 说明），并把现有 4 个 PR 分支全部迁入：
+  - `pr/tag-filter`（5 commits）、`pr/cache-listen`（7）、`pr/fix-headphone-control`（2）、`pr/merge-cache`（3）。
+- 本地路径：`/workspace/PiliUpstream`。remote：`origin`(fetch=上游, push=PiliUpstream)、`pr`(→PiliUpstream)。
+- 凭证：token 存于 `/workspace/.git_credentials`（`credential.helper store --file`），push 免输 token。
+- 后续：给上游提 PR 从本仓库的 `main` 开 `pr/*` 分支，不再用 PiliMax 仓库。
 
 ### 2026-09-14 【优化】动态「…」底部面板可滚动
 - 现象：小屏/选项多时动态「…」面板选项溢出，下方按钮（如「删除」）被截在屏幕外点不到。
