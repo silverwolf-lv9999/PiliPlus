@@ -75,6 +75,13 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-09-14 【PR提交】自定义缓存路径 + 合并/分离缓存
+- 用户要求：把「自定义缓存路径」和「合并下载」提给上游 bggRGjQaUbCoE/PiliPlus。
+- 分支：`pr/merge-cache`，基于最新上游 `a3f9c90d3`，**仅含** 3 个提交（功能 `e789821c2` + 2 个修复 `706377bbf`/`cc1db1070`），13 文件 +337 行，与原始功能逐字一致。
+- 已推送到 fork `pr/merge-cache`。⚠️ 当前 PAT（fine-grained）无上游仓库权限，**无法用 API 在上游创建 PR**；需用户浏览器点「Compare & pull request」：
+  - URL：`https://github.com/bggRGjQaUbCoE/PiliPlus/compare/main...silverwolf-lv9999:pr/merge-cache?expand=1`
+  - title：`feat: 自定义缓存路径与合并/分离缓存（安卓本地 MediaMuxer 合并）`
+
 ### 2026-09-14 【新功能】分享支持「仅复制链接」
 - 来源：上游 issue bggRGjQaUbCoE/PiliPlus#2606「分享功能可不可以只复制链接」，用户确认痛点=动态没有复制链接选项。
 - 改动（均基于当前 main，未发 release）：
