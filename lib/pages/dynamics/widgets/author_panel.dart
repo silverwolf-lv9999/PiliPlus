@@ -335,7 +335,7 @@ class AuthorPanel extends StatelessWidget {
                 leading: const Icon(Icons.share_outlined, size: 19),
                 onTap: () {
                   Get.back();
-                  ShareUtils.shareToApp(
+                  ShareUtils.shareText(
                     '${HttpString.opusBaseUrl}/${item.idStr}',
                   );
                 },

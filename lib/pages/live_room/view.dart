@@ -631,7 +631,7 @@ class _LiveRoomPageState extends State<LiveRoomPage>
               ),
               if (PlatformUtils.isMobile)
                 PopupMenuItem(
-                  onTap: () => ShareUtils.shareToApp(liveUrl),
+                  onTap: () => ShareUtils.shareText(liveUrl),
                   child: const Row(
                     spacing: 10,
                     mainAxisSize: .min,

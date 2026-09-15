@@ -82,12 +82,12 @@
   - URL：`https://github.com/bggRGjQaUbCoE/PiliPlus/compare/main...silverwolf-lv9999:pr/merge-cache?expand=1`
   - title：`feat: 自定义缓存路径与合并/分离缓存（安卓本地 MediaMuxer 合并）`
 
-### 2026-09-14 【新功能】分享支持「仅复制链接」
+### 2026-09-14 【新功能】动态分享新增「复制链接」（仅新增，不动已有复制入口）
 - 来源：上游 issue bggRGjQaUbCoE/PiliPlus#2606「分享功能可不可以只复制链接」，用户确认痛点=动态没有复制链接选项。
-- 改动（均基于当前 main，未发 release）：
-  - `lib/utils/share_utils.dart`：新增 `shareToApp`（直接系统分享）；`shareText` 在移动端改为弹 SmartDialog 菜单「复制链接 / 分享到其他应用」（返回 bool?，false=复制，true=系统分享，null=取消），桌面端仍直接复制。
-  - `lib/pages/dynamics/widgets/author_panel.dart`：动态「…」面板新增「复制链接」项；「分享动态」改走 `shareToApp`（避免二级弹窗）。
-  - 其它自带「复制链接」的入口（UGG/PGC/音乐/直播/文章顶部）改用 `shareToApp`；未带复制选项的入口（文章底栏/音乐/话题/动态详情/用户主页/收藏夹）继续走 `shareText`，自动获得复制选项。
+- 最终方案（用户要求）：**只新增**，不改动原本就带「复制链接」的入口。
+- 改动（基于当前 main，未发 release）：
+  - `lib/pages/dynamics/widgets/author_panel.dart`：动态「…」面板新增「复制链接」项（`Utils.copyText('${HttpString.opusBaseUrl}/${item.idStr}')`），并新增 `import utils/utils.dart`。
+  - ⚠️ 曾一度把 `shareText` 改成弹菜单 + 加 `shareToApp` 并改动 6 处自带复制入口，后按用户要求**全部还原**（`share_utils.dart` 与其它入口恢复原样）。当前净改动仅 author_panel 一处。
 - ⚠️ 沙箱无 Flutter SDK，未跑 `flutter analyze`，需构建验证。
 
 ### 2026-09-14 【修复】2.1.4.2 版本号回退成 1.0/1

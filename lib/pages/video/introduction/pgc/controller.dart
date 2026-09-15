@@ -151,7 +151,7 @@ class PgcIntroController extends CommonIntroController {
                   (item) => item.epId == epId,
                 );
                 Get.back();
-                ShareUtils.shareToApp(
+                ShareUtils.shareText(
                   '${pgcItem.title}${item != null ? ' ${item.showTitle}' : ''}'
                   ' - $videoUrl',
                 );
