@@ -75,6 +75,11 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-09-14 【优化】动态「…」底部面板可滚动
+- 现象：小屏/选项多时动态「…」面板选项溢出，下方按钮（如「删除」）被截在屏幕外点不到。
+- 改动：`lib/pages/dynamics/widgets/author_panel.dart` 的 showModalBottomSheet 里，把选项列表包进 `ConstrainedBox(maxHeight: 屏幕高*0.6)` + `SingleChildScrollView`（顶部手柄和底部「取消」保持固定），屏小可滑动看到全部选项。
+- 状态：仅安卓可验证；沙箱无 Flutter SDK，未跑 analyze。
+
 ### 2026-09-14 【PR提交】自定义缓存路径 + 合并/分离缓存
 - 用户要求：把「自定义缓存路径」和「合并下载」提给上游 bggRGjQaUbCoE/PiliPlus。
 - 分支：`pr/merge-cache`，基于最新上游 `a3f9c90d3`，**仅含** 3 个提交（功能 `e789821c2` + 2 个修复 `706377bbf`/`cc1db1070`），13 文件 +337 行，与原始功能逐字一致。

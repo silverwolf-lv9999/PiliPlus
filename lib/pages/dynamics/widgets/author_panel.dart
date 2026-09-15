@@ -293,7 +293,15 @@ class AuthorPanel extends StatelessWidget {
                   ),
                 ),
               ),
-              if (bvid != null)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context1).size.height * 0.6,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (bvid != null)
                 ListTile(
                   onTap: () {
                     Get.back();
@@ -635,6 +643,10 @@ class AuthorPanel extends StatelessWidget {
                   },
                   minLeadingWidth: 0,
                 ),
+              ],
+                  ),
+                ),
+              ),
               const Divider(thickness: 0.1, height: 1),
               ListTile(
                 onTap: Get.back,
