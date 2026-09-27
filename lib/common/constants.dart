@@ -1,5 +1,5 @@
 abstract final class Constants {
-  static const appName = 'PiliMax';
+  static const appName = 'PiliNova';
   static const sourceCodeUrl = 'https://github.com/bggRGjQaUbCoE/PiliPlus';
 
   // 27eb53fc9058f8c3  移动端 Android
@@ -26,7 +26,7 @@ abstract final class Constants {
   static const String statisticsApp =
       '{"appId":1,"platform":3,"version":"8.43.0","abtest":""}';
 
-  static const baseHeaders = {
+  static final baseHeaders = {
     // 'referer': HttpString.baseUrl,
     'env': 'prod',
     'app-key': 'android64',
