@@ -21,6 +21,7 @@ import 'package:PiliPlus/pages/video/reply_reply/view.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/parse_string.dart';
+import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
 import 'package:PiliPlus/utils/url_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
@@ -29,6 +30,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:window_manager/window_manager.dart';
 
 abstract final class PiliScheme {
   static late AppLinks appLinks;
@@ -42,7 +44,15 @@ abstract final class PiliScheme {
     appLinks = AppLinks();
 
     listener?.cancel();
-    listener = appLinks.uriLinkStream.listen(routePush);
+    listener = appLinks.uriLinkStream.listen(
+      PlatformUtils.isDesktop ? _desktopRoutePush : routePush,
+    );
+  }
+
+  static Future<bool> _desktopRoutePush(Uri uri) async {
+    await windowManager.show();
+    await windowManager.focus();
+    return routePush(uri);
   }
 
   static int? _videoProgress(Map<String, String> queryParameters) {
@@ -638,7 +648,7 @@ abstract final class PiliScheme {
                 bvid: bvid,
                 cid: cid,
                 dimension: res!.dimension,
-                title: res.title,
+                // title: res.title,
                 extraArguments: {
                   'sourceType': SourceType.playlist,
                   'favTitle': '播放列表',
@@ -911,7 +921,7 @@ abstract final class PiliScheme {
           progress: progress,
           off: off,
           dimension: res!.dimension,
-          title: res.title,
+          // title: res.title,
         );
       }
     } catch (e) {
