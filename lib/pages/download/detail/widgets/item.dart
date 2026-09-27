@@ -63,7 +63,7 @@ class DetailItem extends StatelessWidget {
     final theme = Theme.of(context);
     final outline = theme.colorScheme.outline;
     String audioQualityLabel(int? code) {
-      if (code != null) {
+      if (code != null && code != AudioQuality.autoCode) {
         for (final e in AudioQuality.values) {
           if (e.code == code) {
             return e.desc;

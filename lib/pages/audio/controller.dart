@@ -20,7 +20,10 @@ import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pb.dart'
 import 'package:PiliPlus/http/browser_ua.dart';
 import 'package:PiliPlus/http/constants.dart';
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/http/video.dart';
 import 'package:PiliPlus/models/common/audio_normalization.dart';
+import 'package:PiliPlus/models/common/video/audio_quality.dart';
+import 'package:PiliPlus/models/common/video/video_type.dart';
 import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart'
     show BiliDownloadEntryInfo;
 import 'package:PiliPlus/models/video/play/url.dart' as http_model show Volume;
@@ -32,6 +35,7 @@ import 'package:PiliPlus/pages/sponsor_block/block_mixin.dart';
 import 'package:PiliPlus/pages/video/controller.dart';
 import 'package:PiliPlus/pages/video/introduction/ugc/widgets/triple_mixin.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
+import 'package:PiliPlus/plugin/pl_player/models/heart_beat_type.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
 import 'package:PiliPlus/services/download/download_service.dart'
@@ -41,7 +45,6 @@ import 'package:PiliPlus/services/shutdown_timer_service.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/android/android_helper.dart';
 import 'package:PiliPlus/utils/connectivity_utils.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
@@ -114,6 +117,11 @@ class AudioController extends GetxController
   }
 
   late final Rx<PlayRepeat> playMode = Pref.audioPlayMode.obs;
+
+  /// 上次已上报的播放进度（秒）。
+  /// 用于节流：播放中每前进 5 秒、状态变更每前进 2 秒才上报一次，
+  /// 避免高频请求；切歌时需重置为 0。
+  int _heartDuration = 0;
 
   @override
   late final isLogin = Accounts.main.isLogin;
@@ -238,10 +246,57 @@ class AudioController extends GetxController
     return player?.state.playing ?? false;
   }
 
+  /// 上报听视频播放进度，使「稍后再看 / 观看历史」随音频播放同步推进。
+  ///
+  /// - [progress] 为秒数；`-1` 表示播放完成。
+  /// - 未登录、设置中已关闭记录历史、本地缓存播放、非 UGC（如音频区）均不上报。
+  /// - [type] 区分触发来源：播放中节流 5s，状态变更节流 2s，完成时无条件上报。
+  Future<void>? makeHeartBeat(int progress, {HeartBeatType type = .playing}) {
+    if (isLocal ||
+        !Accounts.heartbeat.isLogin ||
+        Pref.historyPause ||
+        progress == 0 ||
+        // B 站进度上报接口只支持 UGC / PGC 稿件，音频区（au）走不通。
+        itemType != 1 ||
+        subId.isEmpty) {
+      return null;
+    }
+    // 播放中/状态变更需要播放器确实在播放，避免暂停期间刷进度。
+    if (type != .completed && !(_playerStatus.isPlaying)) {
+      return null;
+    }
+
+    Future<void> send() {
+      final aid = oid.toInt();
+      return VideoHttp.heartBeat(
+        aid: aid,
+        bvid: IdUtils.av2bv(aid),
+        cid: subId.first.toInt(),
+        progress: progress,
+        videoType: VideoType.ugc,
+      );
+    }
+
+    switch (type) {
+      case .playing:
+        if (progress - _heartDuration >= 5) {
+          _heartDuration = progress;
+          return send();
+        }
+      case .status:
+        if (progress - _heartDuration >= 2) {
+          _heartDuration = progress;
+          return send();
+        }
+      case .completed:
+        return send();
+    }
+    return null;
+  }
+
   Future<void>? onPlay() {
     return player?.play();
   }
-
   Future<void>? onPause() {
     return player?.pause();
   }
@@ -485,9 +540,15 @@ class AudioController extends GetxController
           return;
         }
         position.value = 0;
-        final audio = audios.findClosestTarget(
-          (e) => e.id <= cacheAudioQa,
-          (a, b) => a.id > b.id ? a : b,
+        // 「自动选择最佳音质」开启时按优先级挑最优音轨；否则维持原有就近匹配。
+        final int selectedAudioId = AudioQuality.selectAudioQuality(
+          cacheAudioQa,
+          audios.map((e) => e.id),
+          fallbackQa: AudioQuality.k192.code,
+        );
+        final audio = audios.firstWhere(
+          (e) => e.id == selectedAudioId,
+          orElse: () => audios.first,
         );
         _onOpenMedia(VideoUtils.getCdnUrl(audio.playUrls), volume: volume);
       } else if (playInfo.hasPlayUrl()) {
@@ -564,6 +625,7 @@ class AudioController extends GetxController
           }
           this.position.value = seconds;
           _videoDetailController?.playedTime = position;
+          makeHeartBeat(seconds);
         }
       }),
       stream.duration.listen((duration) {
@@ -575,6 +637,11 @@ class AudioController extends GetxController
           _playerStatus = .playing;
           _stopStatusTimer();
           _updatePlaybackState();
+          // 恢复播放时补一次状态上报（节流 2s），保证切后台/切歌后进度及时落库。
+          final pos = position.value;
+          if (pos > 0) {
+            makeHeartBeat(pos, type: .status);
+          }
         } else {
           animController.reverse();
           _playerStatus = .paused;
@@ -592,6 +659,7 @@ class AudioController extends GetxController
         if (completed) {
           _playerStatus = .completed;
           _startStatusTimer();
+          makeHeartBeat(-1, type: .completed);
           if (shutdownTimerService.isWaiting) {
             shutdownTimerService.handleWaiting();
           } else {
@@ -867,6 +935,7 @@ class AudioController extends GetxController
             final nextPart = parts[nextIndex];
             oid = nextPart.oid;
             this.subId = [nextPart.subId];
+            _heartDuration = 0;
             _queryPlayUrl().then((res) {
               if (res) {
                 _videoDetailController = null;
@@ -892,6 +961,7 @@ class AudioController extends GetxController
 
   void playIndex(int index, {List<Int64>? subId}) {
     if (index == this.index && subId == null) return;
+    _heartDuration = 0;
     this.index = index;
     final audioItem = playlist![index];
     if (isLocal && _localFileUrls != null) {

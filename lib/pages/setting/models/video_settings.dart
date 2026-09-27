@@ -75,6 +75,13 @@ List<SettingsModel> get videoSettings => [
     setKey: SettingBoxKey.cdnSpeedTest,
     defaultVal: true,
   ),
+  const SwitchModel(
+    title: '自动选择最快 CDN',
+    leading: Icon(Icons.speed),
+    subtitle: '测速完成后自动选中速度最快的线路；关闭则需在 CDN 设置中手动选择',
+    setKey: SettingBoxKey.cdnAutoSelectFastest,
+    defaultVal: false,
+  ),
   SwitchModel(
     title: '音频不跟随 CDN 设置',
     subtitle: '直接采用备用 URL，可解决部分视频无声',
@@ -101,14 +108,14 @@ List<SettingsModel> get videoSettings => [
     title: '默认音质',
     leading: const Icon(Icons.music_video_outlined),
     getSubtitle: () =>
-        '当前音质：${AudioQuality.fromCode(Pref.defaultAudioQa).desc}',
+        '当前音质：${_describeAudioQa(Pref.defaultAudioQa)}',
     onTap: _showAudioQaDialog,
   ),
   NormalModel(
     title: '蜂窝网络音质',
     leading: const Icon(Icons.music_video_outlined),
     getSubtitle: () =>
-        '当前音质：${AudioQuality.fromCode(Pref.defaultAudioQaCellular).desc}',
+        '当前音质：${_describeAudioQa(Pref.defaultAudioQaCellular)}',
     onTap: _showAudioCellularQaDialog,
   ),
   NormalModel(
@@ -274,6 +281,12 @@ Future<void> _showVideoCellularQaDialog(
   }
 }
 
+/// 将音质码转为展示文案；[AudioQuality.autoCode]（自动选择）单独处理，
+/// 避免 `AudioQuality.fromCode(0)` 抛异常。
+String _describeAudioQa(int code) => code == AudioQuality.autoCode
+    ? '自动选择最佳音质'
+    : AudioQuality.fromCode(code).desc;
+
 Future<void> _showAudioQaDialog(
   BuildContext context,
   VoidCallback setState,
@@ -283,7 +296,9 @@ Future<void> _showAudioQaDialog(
     builder: (context) => SelectDialog<int>(
       title: '默认音质',
       value: Pref.defaultAudioQa,
-      values: AudioQuality.values.map((e) => (e.code, e.desc)).toList(),
+      values: AudioQuality.defaultAudioQualityOptions
+          .map((e) => (e.code, e.desc))
+          .toList(),
     ),
   );
   if (res != null) {
@@ -301,7 +316,9 @@ Future<void> _showAudioCellularQaDialog(
     builder: (context) => SelectDialog<int>(
       title: '蜂窝网络音质',
       value: Pref.defaultAudioQaCellular,
-      values: AudioQuality.values.map((e) => (e.code, e.desc)).toList(),
+      values: AudioQuality.defaultAudioQualityOptions
+          .map((e) => (e.code, e.desc))
+          .toList(),
     ),
   );
   if (res != null) {

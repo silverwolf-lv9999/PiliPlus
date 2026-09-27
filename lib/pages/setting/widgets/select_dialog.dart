@@ -88,6 +88,13 @@ class _CdnSelectDialogState extends State<CdnSelectDialog> {
   late final List<CancelToken?> _tokens;
   late final bool _cdnSpeedTest;
 
+  /// 各线路测速结果（字节/微秒，即 MB/s 的原始值），失败或未完成时为 null。
+  /// 用于「自动选择最快 CDN」比较大小；_cdnResList 只负责显示文本。
+  late final List<double?> _cdnSpeeds;
+
+  /// 是否在测速完成后自动选中最快线路。
+  late final bool _autoSelectFastest;
+
   @override
   void initState() {
     _cdnSpeedTest = Pref.cdnSpeedTest;
@@ -108,7 +115,9 @@ class _CdnSelectDialogState extends State<CdnSelectDialog> {
         length,
         (_) => ValueNotifier<String?>(null),
       );
+      _cdnSpeeds = List<double?>.filled(length, null);
       _tokens = List.generate(length, (_) => CancelToken());
+      _autoSelectFastest = Pref.cdnAutoSelectFastest;
       _startSpeedTest();
     }
     super.initState();
@@ -155,6 +164,28 @@ class _CdnSelectDialogState extends State<CdnSelectDialog> {
       if (!mounted) break;
       await _testSingleCdn(item, videoItem);
     }
+    if (!mounted) return;
+    _maybeAutoSelectFastest();
+  }
+
+  /// 测速全部结束后，若开启「自动选择最快 CDN」，则选中速度最快的线路并关闭弹窗。
+  /// 全部失败（无有效速度）时不做任何处理，保持当前线路不变。
+  void _maybeAutoSelectFastest() {
+    if (!_autoSelectFastest || !_cdnSpeedTest) return;
+    var fastestIndex = -1;
+    double fastestSpeed = 0;
+    for (var i = 0; i < _cdnSpeeds.length; i++) {
+      final speed = _cdnSpeeds[i];
+      // 速度相同时取列表中靠前的（严格大于才替换）
+      if (speed != null && speed > fastestSpeed) {
+        fastestSpeed = speed;
+        fastestIndex = i;
+      }
+    }
+    if (fastestIndex == -1) return;
+    final target = CDNService.values[fastestIndex];
+    if (target == VideoUtils.cdnService) return;
+    Navigator.of(context).pop(target);
   }
 
   Future<void> _testSingleCdn(CDNService item, BaseItem videoItem) async {
@@ -213,7 +244,9 @@ class _CdnSelectDialogState extends State<CdnSelectDialog> {
   }
 
   void _updateSpeedResult(int index, int downloaded, int duration) {
-    final speed = (downloaded / duration).toStringAsPrecision(3);
+    final double rawSpeed = downloaded / duration;
+    _cdnSpeeds[index] = rawSpeed;
+    final speed = rawSpeed.toStringAsPrecision(3);
     _cdnResList[index].value = '${speed}MB/s';
   }
 

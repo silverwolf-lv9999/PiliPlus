@@ -10,7 +10,6 @@ import 'package:PiliPlus/models/video/play/url.dart';
 import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart';
 import 'package:PiliPlus/models_new/download/bili_download_media_file_info.dart';
 import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/video_utils.dart';
 import 'package:collection/collection.dart';
@@ -121,14 +120,12 @@ abstract final class DownloadHttp {
           final List<int> audioIds = audioDashList
               .map((map) => map.id)
               .toList();
-          int closestNumber = audioIds.findClosestTarget(
-            (e) => e <= preferAudioQa,
-            (a, b) => a > b ? a : b,
+          // 「自动选择最佳音质」开启时按优先级挑最优音轨；否则维持原有就近匹配。
+          final int closestNumber = AudioQuality.selectAudioQuality(
+            preferAudioQa,
+            audioIds,
+            fallbackQa: AudioQuality.k192.code,
           );
-          if (!audioIds.contains(preferAudioQa) &&
-              audioIds.any((e) => e > preferAudioQa)) {
-            closestNumber = AudioQuality.k192.code;
-          }
           final AudioItem audioDash = audioDashList.firstWhere(
             (e) => e.id == closestNumber,
             orElse: () => audioDashList.first,

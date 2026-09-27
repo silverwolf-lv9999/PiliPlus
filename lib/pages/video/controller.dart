@@ -55,7 +55,6 @@ import 'package:PiliPlus/services/download/download_service.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/connectivity_utils.dart';
 import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/extension/nested_scroll_ext.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/size_ext.dart';
@@ -762,6 +761,8 @@ class VideoDetailController extends GetxController
       volume: volume,
       autoFullScreenFlag: autoFullScreenFlag,
     );
+    // 从进度跳转进入时同步 playedTime，避免首帧心跳把 0 当作已播放进度上报。
+    playedTime = seek;
 
     if (isClosed) return;
 
@@ -970,14 +971,12 @@ class VideoDetailController extends GetxController
       final audioList = data.dash?.audio;
       if (audioList != null && audioList.isNotEmpty) {
         final audioIds = audioList.map((map) => map.id).toList();
-        int closestNumber = audioIds.findClosestTarget(
-          (e) => e <= plPlayerController.cacheAudioQa,
-          (a, b) => a > b ? a : b,
+        // 「自动选择最佳音质」开启时按优先级挑最优音轨；否则维持原有就近匹配。
+        final int closestNumber = AudioQuality.selectAudioQuality(
+          plPlayerController.cacheAudioQa,
+          audioIds,
+          fallbackQa: AudioQuality.k192.code,
         );
-        if (!audioIds.contains(plPlayerController.cacheAudioQa) &&
-            audioIds.any((e) => e > plPlayerController.cacheAudioQa)) {
-          closestNumber = AudioQuality.k192.code;
-        }
         firstAudio = audioList.firstWhere(
           (e) => e.id == closestNumber,
           orElse: () => audioList.first,

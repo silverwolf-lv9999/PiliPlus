@@ -459,6 +459,13 @@ abstract final class Pref {
   static bool get cdnSpeedTest =>
       _setting.get(SettingBoxKey.cdnSpeedTest, defaultValue: true);
 
+  /// 测速完成后是否自动选中速度最快的 CDN 线路。
+  /// 仅在 [cdnSpeedTest] 开启时生效；关闭时保持原有手动选择行为。
+  static bool get cdnAutoSelectFastest => _setting.get(
+    SettingBoxKey.cdnAutoSelectFastest,
+    defaultValue: false,
+  );
+
   static bool get autoUpdate =>
       _setting.get(SettingBoxKey.autoUpdate, defaultValue: true);
 
@@ -1066,4 +1073,8 @@ abstract final class Pref {
   /// 缓存时默认是否「合并缓存（mp4）」，false 表示分离缓存(DASH)
   static bool get mergeDownload =>
       _setting.get(SettingBoxKey.mergeDownload, defaultValue: false);
+
+  /// 音频延迟（毫秒），正值=音频延后，负值=音频提前；用于校正蓝牙耳机/外放音画不同步。
+  static int get audioDelay =>
+      _setting.get(SettingBoxKey.audioDelay, defaultValue: 0);
 }

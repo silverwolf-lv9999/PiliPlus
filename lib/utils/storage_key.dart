@@ -32,7 +32,8 @@ abstract final class SettingBoxKey {
       showBatteryLevel = 'showBatteryLevel',
       playerVolume = 'playerVolume',
       maxVolume = 'maxVolume',
-      cacheAudioEnterAudioPlayer = 'cacheAudioEnterAudioPlayer';
+      cacheAudioEnterAudioPlayer = 'cacheAudioEnterAudioPlayer',
+      audioDelay = 'audioDelay';
 
   static const String enableVerticalExpand = 'enableVerticalExpand',
       feedBackEnable = 'feedBackEnable',
@@ -91,6 +92,7 @@ abstract final class SettingBoxKey {
       badCertificateCallback = 'badCertificateCallback',
       continuePlayingPart = 'continuePlayingPart',
       cdnSpeedTest = 'cdnSpeedTest',
+      cdnAutoSelectFastest = 'cdnAutoSelectFastest',
       horizontalPreview = 'horizontalPreview',
       banWordForReply = 'banWordForReply',
       banWordForZone = 'banWordForZone',

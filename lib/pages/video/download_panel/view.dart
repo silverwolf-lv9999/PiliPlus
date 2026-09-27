@@ -67,9 +67,11 @@ class _DownloadPanelState extends State<DownloadPanel> {
   late final cidSet = widget.cidSet;
   VideoQuality _quality = VideoQuality.fromCode(Pref.defaultVideoQa);
   bool _audioOnly = false;
+  // 下载面板需指定具体音质，故排除「自动选择最佳音质」项；
+  // 若设置为自动，则回退到 192K 作为面板初值。
   AudioQuality _audioQuality = AudioQuality.values.firstWhere(
     (e) => e.code == Pref.defaultAudioQa,
-    orElse: () => AudioQuality.k132,
+    orElse: () => AudioQuality.k192,
   );
   bool _merge = Pref.mergeDownload;
 
@@ -150,14 +152,16 @@ class _DownloadPanelState extends State<DownloadPanel> {
                         _audioQuality = value;
                         (context as Element).markNeedsBuild();
                       },
-                      itemBuilder: (context) => AudioQuality.values
-                          .map(
-                            (e) => PopupMenuItem(
-                              value: e,
-                              child: Text(e.desc),
-                            ),
-                          )
-                          .toList(),
+                      itemBuilder: (context) =>
+                          AudioQuality.values
+                              .where((e) => e.code != AudioQuality.autoCode)
+                              .map(
+                                (e) => PopupMenuItem(
+                                  value: e,
+                                  child: Text(e.desc),
+                                ),
+                              )
+                              .toList(),
                       child: child,
                     );
                   }
