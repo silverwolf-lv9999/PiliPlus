@@ -76,6 +76,29 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-09-28 【功能】合并适配 9 项上游/回馈功能（本地完成，待推送）
+- 需求：从 84 项功能清单中选定 9 项（`18,21,23,32,33,35,36,49,66`）逐一合并。**约束：所有功能上游/回馈版已有现成实现，只做「查找原实现 → 最小适配」，禁止重写**（用户明确纠正过三次）。
+- 环境：本机原 Flutter 3.0.0 无法解析项目新 assets 语法，改装 **Flutter 3.47.5** 到 `/opt/sdk/flutter`（sha256 `2132e990…652cbb`）；代理 `127.0.0.1:7890` + pub 镜像。
+- **验证口径**：`flutter analyze` 基线 132 条 error+warning（项目固有，用到了比 3.47.5 更新的 API），评判标准是「改动前后集合逐条一致」（`comm -13/-23`），而非追求全绿。
+- 提交（本地 main，尚未 push）：
+  | 提交 | 内容 | 来源 |
+  |---|---|---|
+  | `4727ce7fb` | CDN 自动选最快 / 自动最佳音质 / 听视频进度上报（#33/#49/#66） | 上游 PR |
+  | `65f140719` | 支持独立选择评论获取账号（#36） | cherry-pick `5837920b6` |
+  | 4 提交 | 评论树（#32） | cherry-pick，零冲突 |
+  | 2 提交 | BiliBreeze 广告折叠（#35，+4270 行） | cherry-pick，零冲突 |
+  | `94ee2a83d` | 我的页卡片可编辑排序（#18） | 移植 `nlsdt/PiliNara` |
+  | `1b4bcb860` | 发布历史：评论/视频弹幕/直播弹幕（#21/#23，1123 行纯新增） | 移植 `naaammme/pilipro` |
+- **#33 方案修正**：用户指出「自动测速原本就有，只需加一个『自动选择最快 CDN』开关」，据此只加 `Pref.cdnAutoSelectFastest` 开关而非重写测速。
+- **#66 关键点**：上游只有视频侧心跳，音频侧（听视频）**完全没有**。本项目在 `pages/audio/controller.dart` 新增 `makeHeartBeat`（playing≥5s / status≥2s / completed 直发），且因 B 站进度接口只支持 UGC/PGC，音频区 `au` 走不通，故加 `itemType != 1` 守卫。
+- **#21/#23 适配要点**（源码与本项目差异较多）：
+  - `package:PiliPro` → `package:PiliPlus`；`common/widgets/list_tile.dart` → `common/widgets/flutter/list_tile.dart`。
+  - `refresh_indicator` 是**顶层函数**，正确路径是 `common/widgets/flutter/refresh_indicator.dart`（不是 `common/widgets/refresh_indicator.dart`），且无需 `Obx` 包裹。
+  - `showConfirmDialog` 的 `title` 参数类型是 `Widget`，需传 `const Text(...)`。
+  - 导出/导入**复用项目既有** `common/widgets/dialog/export_import.dart` 工具族（`exportToLocalFile` / `importFromLocalFile`），替换源码手写的 `FilePicker.platform.*`——本项目 file_picker 已是 13.x，改为静态 API `FilePicker.saveFile/pickFile`，`.platform` 不存在。
+  - 评论记录点只需加在 `pages/video/reply_new/view.dart` 的 `ReplyPage.onCustomPublish`：楼中楼（`reply_reply/controller.dart`）推的就是这个 `ReplyPage`，**无需**再改 `reply_item_grpc.dart`（源码该文件 +178 行是「编辑评论」另一功能）。
+- 净结果：analyze 132 → 132，**零净增**；工作区干净，10 个提交待用户确认后统一推送。
+
 ### 2026-09-27 【改名】应用显示名 PiliMax → PiliNova（仅显示名，不动包名/import）
 - 原因：GitHub 出现同名仓库 `ekmope/PiliMax`（非本项目），为避免品牌/桌面图标与本项目混淆，将 App 显示名由 PiliMax 改为 **PiliNova**（Nova=新星，契合“听歌向”主线且全网零撞名）。仓库 slug `PiliPlus` 保持不变（反而不与 `ekmope/PiliMax` 仓库名撞）。
 - 改动（与 2026-09-15 改名同口径，仅显示名）：
