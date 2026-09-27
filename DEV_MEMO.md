@@ -76,6 +76,18 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-09-27 【发布】合并上游 2.1.5，构建 2.1.5x1
+- 需求：把上游 2.1.5 全部更新合并进 fork/main，并构建 `2.1.5x1`。
+- 合并：`git merge 2.1.5`（上游 2.1.4→2.1.5 共 **62 提交 / 107 文件 / +2983 -1619**）。合并提交 `6916de3b5`。
+- **3 个冲突文件**（均已解决，fork 功能全保留）：
+  - `lib/services/audio_handler.dart`：上游重构 `onUpdateState`（新增 position/speed/debugLabel 参数、删 `instanceExists` 守卫、删 `onPositionChange`）；fork 侧是耳机控制（`onSkipToNext/onSkipToPrevious`）。→ 采纳上游新签名 + 保留 fork 耳机方法。
+  - `lib/pages/audio/controller.dart`：上游 `onClose` 加 `..clearIfNeeded()`；fork 加 `..onSkipToNext/Previous = null`。→ 两者都保留。
+  - `lib/pages/download/detail/widgets/item.dart`：上游 `Future.delayed`→`Timer`（加 `dart:async`）；fork 侧是「缓存听视频进播放器」分支。→ 保留 fork 分支 + 用上游 `Timer`。
+- pubspec 自动合并到 `2.1.5+1`；audio_session 改走 git dev；file_picker 升 13；移除 desktop_webview_window；Flutter 3.47.5。fork 的 `mergeM4sToMp4` 等保留。
+- 构建：dispatch `build.yml`，`ref=main`、`tag=v2.1.5.1`、`app_version=2.1.5x1`、仅安卓。run `36285297047`，**success**（约 12 分钟）。
+- 产物 release `v2.1.5.1`（已 PATCH name→`2.1.5.1` + 更新日志），3 个 APK：arm64-v8a / armeabi-v7a / x86_64，`2.1.5x1+5452`。
+- ⚠️ 沙箱无 Flutter SDK，未本地 analyze；以 CI 构建成功为准。
+
 ### 2026-09-15 【改名】应用显示名 PiliPlus → PiliMax（仅显示名，不动包名/import）
 - 用户确认：**只改显示名**（界面/桌面/关于显示的 app 名称），Dart 包名、`package:PiliPlus/` import（881 文件）、Android applicationId `com.example.piliplus`、源码目录一律不改，降低风险。
 - 改动：
