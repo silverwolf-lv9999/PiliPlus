@@ -8,7 +8,7 @@
 ## 一、仓库与身份
 
 - 上游官方仓库（origin）：`bggRGjQaUbCoE/PiliPlus`
-- 用户个人仓库（fork）：`silverwolf-lv9999/PiliPlus`（即 PiliMax 二开版，应用显示名已改为 **PiliMax**）
+- 用户个人仓库（fork）：`silverwolf-lv9999/PiliPlus`（即 PiliNova 二开版，应用显示名已改为 **PiliNova**）
 - **PR 专项仓库**：`silverwolf-lv9999/PiliUpstream` — 专门用于向上游提 PR 的干净基线仓库，含 `main`（上游基线）+ `pr/*`（PR 分支）。
 - 这是对官方 PiliPlus 的二次开发版，目标是把自研功能并入个人仓库的 `main`。
 
@@ -75,6 +75,19 @@
 ## 九、更新 / 修改日志
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
+
+### 2026-09-27 【改名】应用显示名 PiliMax → PiliNova（仅显示名，不动包名/import）
+- 原因：GitHub 出现同名仓库 `ekmope/PiliMax`（非本项目），为避免品牌/桌面图标与本项目混淆，将 App 显示名由 PiliMax 改为 **PiliNova**（Nova=新星，契合“听歌向”主线且全网零撞名）。仓库 slug `PiliPlus` 保持不变（反而不与 `ekmope/PiliMax` 仓库名撞）。
+- 改动（与 2026-09-15 改名同口径，仅显示名）：
+  - `lib/common/constants.dart`：`appName = 'PiliNova'`。
+  - `android/app/src/main/res/values/string.xml`：`app_name` → PiliNova。
+  - `android/app/src/debug/res/values/string.xml`：`app_name` → PiliNova debug。
+  - `android/app/src/main/AndroidManifest.xml`：两处 `intent-filter android:label` → PiliNova。
+  - `ios/Runner/Info.plist`：`CFBundleDisplayName`/`CFBundleName` → PiliNova。
+  - `README.md`：标题 → PiliNova。
+- 不变：Dart 包名、`package:PiliPlus/` import、Android applicationId `com.example.piliplus`、源码目录、pubspec name、仓库 slug、APK 名/版本号（仍走 `build.ps1` + `--build-name`）。
+- 提交：`fork/main` 六连提交（constants `0f7e1158`、main string `d4acce3f`、debug string `fa39e53e`、AndroidManifest `ec52cfa7`、Info.plist `c1998532`、README `b8fbf31f`）。
+- ⚠️ 沙箱无 Flutter SDK，未本地 analyze；以 CI 构建成功为准。改名需重新触发安卓构建才会体现在 APK / 桌面图标上。
 
 ### 2026-09-27 【发布】合并上游 2.1.5，构建 2.1.5x1
 - 需求：把上游 2.1.5 全部更新合并进 fork/main，并构建 `2.1.5x1`。
@@ -208,7 +221,7 @@
 ### 2026-09-14 【发布/构建偏好】只构建安卓端
 - 用户要求：以后构建**只做安卓端**，其他端（iOS/macOS/Windows/Linux）一律不构建。
 - 已把 `.github/workflows/build.yml` 中 `build_ios/build_mac/build_win_x64/build_linux_x64` 的输入默认值从 `true` 改为 `false`（仅 `build_android` 默认 `true`），并已推送。以后 web 手动触发或其他 dispatch 默认只构建安卓。
-- 触发时不发 release 用 `tag:""`；如需显式只安卓，可带 `build_android:true`（其余不传即可，因已默认 false）。
+- 触发时不发 release 用 `tag:`；如需显式只安卓，可带 `build_android:true`（其余不传即可，因已默认 false）。
 
 ### 2026-09-14 【回退】移除「应用内返回不停止音频 + 悬浮窗控制」功能
 - 用户决定：该功能 bug 太多，整体回退不要了。
