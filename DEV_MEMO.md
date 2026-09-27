@@ -89,6 +89,34 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-09-28 【入口调整 + 版本号修复】弹幕记录并入「我的」页；versionCode 147 → 5474
+- **背景**：用户实测反馈两点——① 弹幕记录入口在消息页，小屏设备可能显示不全看不到；② 编译出的 APK 版本号错误（显示为 1 量级，而历史版本已 5000+）。
+- **入口调整（最终方案）**：
+  - 用户明确要求：「最开始在消息页进入的那个页面，既可以看评论也可以看弹幕，把这个页面放到『我的』页入口就行」——即**不要弹菜单，直接进页面**。
+  - **我先做错了一版**：在「我的」页做 `showMenu` 弹出菜单二选一（评论记录 / 弹幕记录），用户反馈菜单定位跑到**屏幕右下角**，且多此一举。已删除该方法。
+  - 最终：`lib/pages/mine/view.dart` 的图标按钮 `onPressed` 直接 `Get.toNamed('/hisPublished')`；页面内的「全部 / 评论 / 弹幕」标签负责筛选，UI 不动。
+  - 涉及文件：`lib/pages/mine/view.dart`（删 `_showReplyHistoryMenu`、按钮改直连）、`lib/pages/whisper/controller.dart`（移除消息页「我发布的」入口）、`lib/router/app_pages.dart` + `his_published/{view,controller}.dart`（支持 `initialFilter` 传参，保留能力备用）。
+- **版本号修复（根因：沙箱仓库是浅克隆）**：
+  - 现象：本地编译出的 APK `versionCode=1`（后为 147），而 CI 构建是 5000+。
+  - **根因**：`build.ps1` 用 `git rev-list --count HEAD` 算 versionCode。我在沙箱 clone 的是**浅克隆**（`.git/shallow` 有 4 个 graft 点：`11d02207f` / `2ddf574aa` / `4b91b4001` / `a85ae21c0`），该命令只数到 147 就停；CI 是完整克隆，数出 5474+。**脚本逻辑没错，是环境历史不完整。**
+  - 验证：`git rev-list --all --count` = 5737（含全部可达对象），`origin/main` = 5460，补全后 HEAD = 5474，与用户所述「5000 多」吻合。
+  - 修复：`git fetch --unshallow origin` 补全历史；新建 **`lib/scripts/build.sh`**（`build.ps1` 的 bash 等价版，仅 android 分支），构建前必须先跑它，否则 versionCode 又变 1。
+  - 结果：`pubspec.yaml` → `version: 2.1.5+5474`；aapt 校验 `versionCode='5474' versionName='2.1.5'`。
+- **版本命名约定的待确认点**：历史约定（见 2026-09-14 条目）是系统/应用内版本号用 **`2.1.4xN`（字母 x 分隔）**，如 `2.1.4x2`。本次 `build.sh` 在无 override 时生成的是 `2.1.5-c416deeda`（带 commit 短哈希）。如需延续 `x` 约定，构建时应传 `VersionOverride`（如 `2.1.5x1`）。
+- **沙箱构建环境坑（本次新增）**：
+  - **沙箱休眠会掐断长构建**，并连带把 mihomo 代理进程弄死 → 下次构建报 `Connection refused` 到 `pub.flutter-io.cn`。**每次构建前先确认代理存活**。
+  - 休眠中断还会**写坏 R8 产物**：`build/app/outputs/mapping/release/mapping.txt` 损坏后报 `Cannot access output property 'mappingFile'` / `Failed to create MD5 hash`。**修复：`rm -rf build/app/outputs/mapping/release/` 后重编**。
+  - 下载 lint 依赖时会偶发 `java.io.IOException: Input/output error`，属网络抖动，重跑即可。
+  - 完整历史补全后**不要**再浅克隆，否则版本号会再次算错。
+- **构建命令**（口径与 CI 一致）：
+  ```bash
+  source /opt/sdk/build_env.sh
+  bash lib/scripts/build.sh android          # 注入版本号（必做）
+  flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json
+  ```
+- 产物：`app-arm64-v8a-release.apk` 24.2MB，versionCode 5474，tag/提交 `c416deeda`。
+- 状态：**本地完成，未推送**（用户要求「没做完的工作不要推」；且此前误发过一次 GitHub Release，已删除）。
+
 ### 2026-09-28 【功能】合并适配 9 项上游/回馈功能（本地完成，待推送）
 - 需求：从 84 项功能清单中选定 9 项（`18,21,23,32,33,35,36,49,66`）逐一合并。**约束：所有功能上游/回馈版已有现成实现，只做「查找原实现 → 最小适配」，禁止重写**（用户明确纠正过三次）。
 - 环境：本机原 Flutter 3.0.0 无法解析项目新 assets 语法，改装 **Flutter 3.47.5** 到 `/opt/sdk/flutter`（sha256 `2132e990…652cbb`）；代理 `127.0.0.1:7890` + pub 镜像。

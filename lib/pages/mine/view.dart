@@ -9,7 +9,6 @@ import 'package:PiliPlus/common/widgets/player_bar.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/mine_card_type.dart';
 import 'package:PiliPlus/models/common/nav_bar_config.dart';
-import 'package:PiliPlus/models/publish_history_item.dart';
 import 'package:PiliPlus/models_new/fav/fav_folder/list.dart';
 import 'package:PiliPlus/models_new/history/list.dart';
 import 'package:PiliPlus/models_new/later/list.dart';
@@ -97,49 +96,6 @@ class _MediaPageState extends CommonPageState<MinePage>
       return PublishHistoryStorage.getHistory().isNotEmpty;
     } catch (_) {
       return false;
-    }
-  }
-
-  /// 评论记录 / 弹幕记录二选一。
-  /// 弹幕记录复用发布历史页，并预设筛选为视频弹幕。
-  Future<void> _showReplyHistoryMenu(BuildContext context) async {
-    final box = context.findRenderObject() as RenderBox?;
-    final theme = Theme.of(context);
-    final res = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        box?.size.width ?? 0,
-        box?.size.height ?? 0,
-        0,
-        0,
-      ),
-      items: [
-        if (GStorage.reply != null)
-          const PopupMenuItem(
-            value: 'reply',
-            child: ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.message_outlined),
-              title: Text('评论记录'),
-            ),
-          ),
-        const PopupMenuItem(
-          value: 'danmaku',
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.subtitles_outlined),
-            title: Text('弹幕记录'),
-          ),
-        ),
-      ],
-      color: theme.colorScheme.surface,
-    );
-    if (res == 'reply') {
-      Get.toNamed('/myReply');
-    } else if (res == 'danmaku') {
-      Get.toNamed('/hisPublished', arguments: PublishType.videoDanmaku);
     }
   }
 
@@ -261,8 +217,8 @@ class _MediaPageState extends CommonPageState<MinePage>
                 iconSize: iconSize,
                 padding: padding,
                 style: style,
-                tooltip: '评论记录',
-                onPressed: () => _showReplyHistoryMenu(context),
+                tooltip: '发布记录',
+                onPressed: () => Get.toNamed('/hisPublished'),
                 icon: const Icon(Icons.message_outlined),
               ),
             Obx(
