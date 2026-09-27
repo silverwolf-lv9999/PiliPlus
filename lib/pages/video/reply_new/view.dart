@@ -26,6 +26,7 @@ import 'package:PiliPlus/utils/extension/context_ext.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/latex_to_unicode.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
+import 'package:PiliPlus/utils/publish_history_storage.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
@@ -399,6 +400,21 @@ class _ReplyPageState extends CommonRichTextPubPageState<ReplyPage> {
     if (res case Success(:final response)) {
       hasPub = true;
       SmartDialog.showToast('发送成功');
+      // 保存到发布历史（「我的 - 我发布的」可查）
+      try {
+        final int? rpid = response?.id.toInt();
+        await PublishHistoryStorage.saveComment(
+          content: message,
+          type: widget.replyType,
+          oid: widget.oid,
+          root: widget.root,
+          parent: widget.parent,
+          rpid: rpid,
+        );
+      } catch (e) {
+        // 静默处理保存失败，不影响用户体验
+        debugPrint('保存评论历史失败: $e');
+      }
       Get.back(result: response);
     } else {
       res.toast();

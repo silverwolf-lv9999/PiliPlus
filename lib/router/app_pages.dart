@@ -44,6 +44,7 @@ import 'package:PiliPlus/pages/member_video_web/season_series/view.dart';
 import 'package:PiliPlus/pages/msg_feed_top/at_me/view.dart';
 import 'package:PiliPlus/pages/msg_feed_top/like_detail/view.dart';
 import 'package:PiliPlus/pages/msg_feed_top/like_me/view.dart';
+import 'package:PiliPlus/pages/msg_feed_top/his_published/view.dart';
 import 'package:PiliPlus/pages/msg_feed_top/reply_me/view.dart';
 import 'package:PiliPlus/pages/msg_feed_top/sys_msg/view.dart';
 import 'package:PiliPlus/pages/music/view.dart';
@@ -137,6 +138,7 @@ class Routes {
     GetPage(name: '/likeMe', page: () => const LikeMePage()),
     // 系统消息
     GetPage(name: '/sysMsg', page: () => const SysMsgPage()),
+    GetPage(name: '/hisPublished', page: () => const HisPublishedPage()),
     // 登录页面
     GetPage(name: '/loginPage', page: () => const LoginPage()),
     // 用户动态

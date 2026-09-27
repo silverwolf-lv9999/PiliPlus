@@ -7,6 +7,7 @@ import 'package:PiliPlus/pages/common/publish/common_rich_text_pub_page.dart';
 import 'package:PiliPlus/pages/live_emote/controller.dart';
 import 'package:PiliPlus/pages/live_emote/view.dart';
 import 'package:PiliPlus/pages/live_room/controller.dart';
+import 'package:PiliPlus/utils/publish_history_storage.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart' hide TextField;
@@ -199,6 +200,17 @@ class _ReplyPageState extends CommonRichTextPubPageState<LiveSendDmPanel> {
         ..savedDanmaku?.clear()
         ..savedDanmaku = null;
       SmartDialog.showToast('发送成功');
+      // 保存到发布历史（「我的 - 我发布的」可查）
+      try {
+        await PublishHistoryStorage.saveLiveDanmaku(
+          content: message,
+          roomId: liveRoomController.roomId,
+          targetTitle: liveRoomController.roomInfoH5.value?.roomInfo?.title,
+        );
+      } catch (e) {
+        // 静默处理保存失败，不影响用户体验
+        debugPrint('保存直播弹幕历史失败: $e');
+      }
     } else {
       res.toast();
     }

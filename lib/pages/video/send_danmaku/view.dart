@@ -7,6 +7,7 @@ import 'package:PiliPlus/common/widgets/view_safe_area.dart';
 import 'package:PiliPlus/http/danmaku.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/publish_panel_type.dart';
+import 'package:PiliPlus/utils/publish_history_storage.dart';
 import 'package:PiliPlus/pages/common/publish/common_text_pub_page.dart';
 import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
 import 'package:PiliPlus/pages/setting/slide_color_picker.dart';
@@ -466,6 +467,20 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
           extra: extra,
         ),
       );
+      // 保存到发布历史（「我的 - 我发布的」可查）
+      try {
+        final cid = widget.cid;
+        if (cid is int) {
+          await PublishHistoryStorage.saveVideoDanmaku(
+            content: editController.text,
+            bvid: widget.bvid?.toString() ?? '',
+            cid: cid,
+          );
+        }
+      } catch (e) {
+        // 静默处理保存失败，不影响用户体验
+        debugPrint('保存视频弹幕历史失败: $e');
+      }
     } else {
       res.toast();
     }
