@@ -64,6 +64,16 @@
 3. 音乐播放器列表与缓存列表排序不一致：本地播放列表应按 `pageId` 分组、组内按 `sortKey` 排序，且把当前缓存视频条目插入列表首位。
 4. 合并缓存回退判断：用嵌套 `if (forceMerged){ if(res case Success(:final response)){ ... } }`，避免 guarded-case 在 `&&` 后绑定变量报错；`Success` 字段名是 `response` 不是 `r`。
 5. 结构化 UI 修改后记得同时处理相关 import（如删掉不再使用的 `connectivity_plus`、`platform_utils`），避免 analyze 报错。
+6. **沙箱本地可编译 APK（已打通，2026-09-28）**：
+   - 环境：Flutter 3.47.5 `/opt/sdk/flutter`、JDK17 `/root/.sdkman/candidates/java/17.0.20-tem`、Android SDK `/opt/sdk/android`（platform **android-37.0**、build-tools 37.0.0 / 自动补装 36.0.0、NDK 28.2.13676358）、Gradle 9.5.0 走 wrapper 缓存。
+   - 一键环境：`source /opt/sdk/build_env.sh`（含代理与镜像变量）。
+   - 启动代理：`nohup /usr/local/bin/mihomo -d /root/.config/mihomo &`。**踩坑：mihomo 首次启动会因为下载 `geoip.metadb` 失败而 fatal 退出**；实际配置是 `geodata-mode: true`（用本地 `GeoIP.dat`），直接再启动一次即可成功。
+   - **sdkmanager 只认 `HTTP_PROXY` 环境变量**，不认 `https_proxy`、也不认 JVM 的 `-Dhttps.proxyHost`（改脚本硬编码也没用）。另：自带的 cmdline-tools 12.0 太旧、列不出新包，需换 19.0。
+   - **Gradle 走代理必须写 `~/.gradle/gradle.properties` 的 `systemProp.http(s).proxyHost/Port`**；`GRADLE_OPTS` 和项目 `android/gradle.properties` 里的 `org.gradle.jvmargs` 传 JVM 参数都不生效。不加会报 `Remote host terminated the handshake`（实为直连 dl.google.com 被墙）。
+   - **不要写 `~/.gradle/init.gradle` 往 `pluginManagement.repositories` 塞镜像**：AGP 9 默认 `FAIL_ON_PROJECT_REPOS`，会直接构建失败。项目 `settings.gradle.kts` 自带 google/mavenCentral/gradlePluginPortal，走代理即可。
+   - **Android 37 无纯 `android-37` 目录**，SDK 里叫 `android-37.0`（API 37 起改「主版本.次版本」命名）。AGP 按旧式 `android-37` 查找会报 `Failed to find target with hash string 'android-37'`。**解法：`ln -sfn android-37.0 /opt/sdk/android/platforms/android-37`**。
+   - ⚠️ **`flutter analyze` 全绿 ≠ 能编译**：`analyze` 只报 132 条既有问题，而 AOT 编译（CFE）会额外暴露 **66~68 条「引用 Flutter 私有 API」错误**，两者规则不同、互不覆盖。**判断编译可用性必须真跑 `flutter build apk`**。
+7. **基线（`origin/main` = `e252cd310`）本身无法用 Flutter 3.47.5 编译 APK**：AOT 报 66~68 条错误，集中在 22 个文件，均为引用 Flutter 3.47.5 已变更的私有 API（`textPainter` 改 `_textPainter`、`DraggableScrollableSheet` 私有类、`StandardBottomSheet`、`IndicatorPainter`、`rawText`/`hitTestBehavior`/`horizontalDragGestureRecognizer`/`flex`/`scrollDirection` 等命名参数）。**这与 9 项功能合并无关**（改动文件与报错文件交集为空；对比基线 68 条 vs 合并后 66 条，合并反而净减 2 条）。要出 APK 需另行处理这批私有 API 适配——属独立任务，不在「合并适配」范围内。
 
 ## 七、当前状态（截至 2026-09-14）
 
