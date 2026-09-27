@@ -9,6 +9,7 @@ import 'package:PiliPlus/common/widgets/player_bar.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/mine_card_type.dart';
 import 'package:PiliPlus/models/common/nav_bar_config.dart';
+import 'package:PiliPlus/models/publish_history_item.dart';
 import 'package:PiliPlus/models_new/fav/fav_folder/list.dart';
 import 'package:PiliPlus/models_new/history/list.dart';
 import 'package:PiliPlus/models_new/later/list.dart';
@@ -25,6 +26,7 @@ import 'package:PiliPlus/utils/extension/get_ext.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/publish_history_storage.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/utils.dart';
@@ -87,6 +89,58 @@ class _MediaPageState extends CommonPageState<MinePage>
       return false;
     }
     return super.onNotificationType2(notification);
+  }
+
+  /// 是否存在弹幕发布历史（用于决定是否显示记录入口）。
+  bool get _hasPublishHistory {
+    try {
+      return PublishHistoryStorage.getHistory().isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 评论记录 / 弹幕记录二选一。
+  /// 弹幕记录复用发布历史页，并预设筛选为视频弹幕。
+  Future<void> _showReplyHistoryMenu(BuildContext context) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final theme = Theme.of(context);
+    final res = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        box?.size.width ?? 0,
+        box?.size.height ?? 0,
+        0,
+        0,
+      ),
+      items: [
+        if (GStorage.reply != null)
+          const PopupMenuItem(
+            value: 'reply',
+            child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.message_outlined),
+              title: Text('评论记录'),
+            ),
+          ),
+        const PopupMenuItem(
+          value: 'danmaku',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.subtitles_outlined),
+            title: Text('弹幕记录'),
+          ),
+        ),
+      ],
+      color: theme.colorScheme.surface,
+    );
+    if (res == 'reply') {
+      Get.toNamed('/myReply');
+    } else if (res == 'danmaku') {
+      Get.toNamed('/hisPublished', arguments: PublishType.videoDanmaku);
+    }
   }
 
   @override
@@ -202,13 +256,13 @@ class _MediaPageState extends CommonPageState<MinePage>
               ),
               msgBadge(_mainController),
             ],
-            if (GStorage.reply != null)
+            if (GStorage.reply != null || _hasPublishHistory)
               IconButton(
                 iconSize: iconSize,
                 padding: padding,
                 style: style,
                 tooltip: '评论记录',
-                onPressed: () => Get.toNamed('/myReply'),
+                onPressed: () => _showReplyHistoryMenu(context),
                 icon: const Icon(Icons.message_outlined),
               ),
             Obx(

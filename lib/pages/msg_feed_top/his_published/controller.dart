@@ -3,6 +3,11 @@ import 'package:PiliPlus/utils/publish_history_storage.dart';
 import 'package:get/get.dart';
 
 class HisPublishedController extends GetxController {
+  HisPublishedController({this.initialFilter});
+
+  /// 进入时的默认筛选类型；null 表示「全部」。
+  final PublishType? initialFilter;
+
   RxList<PublishHistoryItem> publishList =
       <PublishHistoryItem>[].obs; // 原始数据(已过滤类型)
   RxList<PublishHistoryItem> filteredList =
@@ -11,7 +16,7 @@ class HisPublishedController extends GetxController {
       <PublishHistoryItem>[].obs; // 当前显示的分页数据
   RxBool isLoading = false.obs;
   RxBool isLoadingMore = false.obs;
-  Rx<PublishType?> filterType = Rx<PublishType?>(null);
+  late final Rx<PublishType?> filterType = Rx<PublishType?>(initialFilter);
   RxString searchKeyword = ''.obs;
 
   // 分页相关

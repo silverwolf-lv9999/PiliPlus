@@ -13,14 +13,20 @@ import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart' hide ListTile;
 
 class HisPublishedPage extends StatefulWidget {
-  const HisPublishedPage({super.key});
+  const HisPublishedPage({super.key, this.initialFilter});
+
+  /// 进入时的默认筛选类型；null 表示「全部」。
+  /// 从「我的」页的弹幕记录入口进入时会预设为弹幕类型。
+  final PublishType? initialFilter;
 
   @override
   State<HisPublishedPage> createState() => _HisPublishedPageState();
 }
 
 class _HisPublishedPageState extends State<HisPublishedPage> {
-  late final _controller = Get.put(HisPublishedController());
+  late final _controller = Get.put(
+    HisPublishedController(initialFilter: widget.initialFilter),
+  );
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
 

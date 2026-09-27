@@ -58,12 +58,6 @@ class WhisperController extends CommonWhisperController<SessionMainReply> {
         route: "/sysMsg",
         enabled: true,
       ),
-      const (
-        name: "我发布的",
-        icon: Icons.history,
-        route: "/hisPublished",
-        enabled: true,
-      ),
     ];
     unreadCounts = List.filled(msgFeedTopItems.length, 0).obs;
     queryMsgFeedUnread();
@@ -79,8 +73,6 @@ class WhisperController extends CommonWhisperController<SessionMainReply> {
         data.at,
         disableLikeMsg ? 0 : data.like,
         data.sysMsg,
-        // 「我发布的」无未读数，填 0 以对齐 msgFeedTopItems 长度
-        0,
       ];
       if (!listEquals(this.unreadCounts, unreadCounts)) {
         this.unreadCounts.value = unreadCounts;
