@@ -77,7 +77,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter android:label="PiliMax">
+            <intent-filter android:label="PiliNova">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
@@ -103,7 +103,7 @@
                 <!--<data android:host="bangumi.bilibili.com"/>-->
                 <!--<data android:host="space.bilibili.com"/>-->
             </intent-filter>
-            <intent-filter android:label="PiliMax">
+            <intent-filter android:label="PiliNova">
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.SEARCH" />
                 <action android:name="com.example.piliplus.SHORTCUT" />
@@ -114,48 +114,26 @@
                 <data android:scheme="bilibili" />
                 <data android:host="download" />
                 <data android:host="forward" />
-                <data
-                    android:host="comment"
-                    android:pathPattern="/detail/.*/.*/.*" />
+                <data android:host="comment" android:pathPattern="/detail/.*/.*/.*" />
                 <data android:host="uper" />
-                <data
-                    android:host="article"
-                    android:pathPattern="/readlist" />
+                <data android:host="article" android:pathPattern="/readlist" />
                 <data android:host="opus" />
-                <data
-                    android:host="advertise"
-                    android:path="/home" />
+                <data android:host="advertise" android:path="/home" />
                 <data android:host="clip" />
-                <data
-                    android:host="search"
-                    android:pathPattern=".*" />
+                <data android:host="search" android:pathPattern=".*" />
                 <data android:host="stardust-search" />
                 <data android:host="music" />
                 <data android:host="cheese" />
-                <data
-                    android:host="bangumi"
-                    android:pathPattern="/season.*" />
-                <data
-                    android:host="bangumi"
-                    android:pathPattern="/.*" />
-                <data
-                    android:host="pictureshow"
-                    android:pathPrefix="/creative_center" />
+                <data android:host="bangumi" android:pathPattern="/season.*" />
+                <data android:host="bangumi" android:pathPattern="/.*" />
+                <data android:host="pictureshow" android:pathPrefix="/creative_center" />
                 <data android:host="cliparea" />
                 <data android:host="im" />
-                <data
-                    android:host="im"
-                    android:path="/notifications" />
+                <data android:host="im" android:path="/notifications" />
                 <data android:host="following" />
-                <data
-                    android:host="following"
-                    android:pathPattern="/detail/.*" />
-                <data
-                    android:host="following"
-                    android:path="/publishInfo/" />
-                <data
-                    android:host="laser"
-                    android:pathPattern="/.*" />
+                <data android:host="following" android:pathPattern="/detail/.*" />
+                <data android:host="following" android:path="/publishInfo/" />
+                <data android:host="laser" android:pathPattern="/.*" />
                 <data android:host="livearea" />
                 <data android:host="live" />
                 <data android:host="catalog" />
@@ -173,38 +151,20 @@
                 <data android:host="video" />
                 <data android:host="story" />
                 <data android:host="podcast" />
-                <data
-                    android:host="main"
-                    android:path="/favorite" />
-                <data
-                    android:host="pgc"
-                    android:path="/theater/match" />
-                <data
-                    android:host="pgc"
-                    android:path="/theater/square" />
-                <data
-                    android:host="m.bilibili.com"
-                    android:path="/topic-detail" />
+                <data android:host="main" android:path="/favorite" />
+                <data android:host="pgc" android:path="/theater/match" />
+                <data android:host="pgc" android:path="/theater/square" />
+                <data android:host="m.bilibili.com" android:path="/topic-detail" />
                 <data android:host="article" />
-                <data
-                    android:host="pegasus"
-                    android:pathPattern="/channel/v2/.*" />
-                <data
-                    android:host="feed"
-                    android:pathPattern="/channel" />
+                <data android:host="pegasus" android:pathPattern="/channel/v2/.*" />
+                <data android:host="feed" android:pathPattern="/channel" />
                 <data android:host="vip" />
-                <data
-                    android:host="user_center"
-                    android:path="/vip" />
+                <data android:host="user_center" android:path="/vip" />
                 <data android:host="history" />
-                <data
-                    android:host="charge"
-                    android:path="/rank" />
+                <data android:host="charge" android:path="/rank" />
                 <data android:host="assistant" />
                 <data android:host="feedback" />
-                <data
-                    android:host="auth"
-                    android:path="/launch" />
+                <data android:host="auth" android:path="/launch" />
             </intent-filter>
         </activity>
         <provider
