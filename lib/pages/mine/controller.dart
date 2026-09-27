@@ -7,6 +7,8 @@ import 'package:PiliPlus/models/common/theme/theme_type.dart';
 import 'package:PiliPlus/models/user/info.dart';
 import 'package:PiliPlus/models/user/stat.dart';
 import 'package:PiliPlus/models_new/fav/fav_folder/data.dart';
+import 'package:PiliPlus/models_new/history/list.dart';
+import 'package:PiliPlus/models_new/later/list.dart';
 import 'package:PiliPlus/pages/common/common_data_controller.dart';
 import 'package:PiliPlus/services/account_service.dart';
 import 'package:PiliPlus/utils/accounts.dart';
@@ -27,6 +29,14 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
   AccountService accountService = Get.find<AccountService>();
 
   int? favFolderCount;
+
+  /// 「观看记录」卡片数据（最多 20 条）。
+  final Rx<LoadingState<List<HistoryItemModel>?>> historyLoadingState =
+      LoadingState<List<HistoryItemModel>?>.loading().obs;
+
+  /// 「稍后再看」卡片数据（最多 20 条）。
+  final Rx<LoadingState<List<LaterItemModel>?>> toViewLoadingState =
+      LoadingState<List<LaterItemModel>?>.loading().obs;
 
   // 用户信息 头像、昵称、lv
   final Rx<UserInfoData> userInfo = UserInfoData().obs;
@@ -84,6 +94,31 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
       userInfo.value = userInfoCache;
       queryData();
       queryUserInfo();
+      queryHistory();
+      queryToView();
+    }
+  }
+
+  /// 拉取「稍后再看」列表，供我的页卡片展示。
+  Future<void> queryToView() async {
+    final res = await UserHttp.seeYouLater(page: 1);
+    if (res case Success(:final response)) {
+      toViewLoadingState.value = Success(response.list?.take(20).toList());
+    } else if (res case Error(:final errMsg, :final code)) {
+      toViewLoadingState.value = Error(errMsg, code: code);
+    }
+  }
+
+  /// 拉取「观看记录」列表，供我的页卡片展示。
+  Future<void> queryHistory() async {
+    final res = await UserHttp.historyList(
+      type: 'all',
+      account: Accounts.history,
+    );
+    if (res case Success(:final response)) {
+      historyLoadingState.value = Success(response.list?.take(20).toList());
+    } else if (res case Error(:final errMsg, :final code)) {
+      historyLoadingState.value = Error(errMsg, code: code);
     }
   }
 
@@ -290,6 +325,8 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
       return Future.syncValue(null);
     }
     queryUserInfo();
+    queryHistory();
+    queryToView();
     return super.onRefresh().whenComplete(() {
       if (isManual) {
         scrollController.jumpToTop();
@@ -305,6 +342,8 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
       userInfo.value = UserInfoData();
       userStat.value = const UserStat();
       loadingState.value = LoadingState.loading();
+      historyLoadingState.value = LoadingState.loading();
+      toViewLoadingState.value = LoadingState.loading();
     }
   }
 }
