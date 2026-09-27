@@ -65,6 +65,9 @@
 4. 合并缓存回退判断：用嵌套 `if (forceMerged){ if(res case Success(:final response)){ ... } }`，避免 guarded-case 在 `&&` 后绑定变量报错；`Success` 字段名是 `response` 不是 `r`。
 5. 结构化 UI 修改后记得同时处理相关 import（如删掉不再使用的 `connectivity_plus`、`platform_utils`），避免 analyze 报错。
 6. **沙箱本地可编译 APK（已打通，2026-09-28）**：
+   - **⚠️ 最关键前提：构建前必须执行 `lib/scripts/patch.ps1`（本沙箱用等价的 `/opt/sdk/apply_patches.sh android`）**。该脚本给 **Flutter SDK 打 24 个补丁 + 给 `material_ui` 包打 9 个补丁**，把项目依赖的私有/扩展 API 恢复出来（`text_painter.patch` 暴露 `layoutCache`、`scrollable_gesture.patch` 给 `TabBarView` 加 `scrollDirection`/`hitTestBehavior`/`horizontalDragGestureRecognizer`、`scaffold.patch`/`draggable_scrollable_sheet.patch`/`selectable_region.patch` 暴露一堆私有成员等）。**漏跑此步会在 AOT 阶段报 66~68 条「未定义 getter / 无此命名参数」错误。**
+   - 顺序要求：**`flutter pub get` 必须在打 material_ui 补丁之前**（`pub get` 会重新解包覆盖 pub-cache）。脚本已内置此顺序。
+   - 沙箱用镜像源，包在 `~/.pub-cache/hosted/pub.flutter-io.cn/`（CI 是 `hosted/pub.dev/`）；注意 `material_ui` 包内是 `lib/src/tabs.dart`（不是 `lib/src/material/tabs.dart`）。
    - 环境：Flutter 3.47.5 `/opt/sdk/flutter`、JDK17 `/root/.sdkman/candidates/java/17.0.20-tem`、Android SDK `/opt/sdk/android`（platform **android-37.0**、build-tools 37.0.0 / 自动补装 36.0.0、NDK 28.2.13676358）、Gradle 9.5.0 走 wrapper 缓存。
    - 一键环境：`source /opt/sdk/build_env.sh`（含代理与镜像变量）。
    - 启动代理：`nohup /usr/local/bin/mihomo -d /root/.config/mihomo &`。**踩坑：mihomo 首次启动会因为下载 `geoip.metadb` 失败而 fatal 退出**；实际配置是 `geodata-mode: true`（用本地 `GeoIP.dat`），直接再启动一次即可成功。
@@ -72,8 +75,8 @@
    - **Gradle 走代理必须写 `~/.gradle/gradle.properties` 的 `systemProp.http(s).proxyHost/Port`**；`GRADLE_OPTS` 和项目 `android/gradle.properties` 里的 `org.gradle.jvmargs` 传 JVM 参数都不生效。不加会报 `Remote host terminated the handshake`（实为直连 dl.google.com 被墙）。
    - **不要写 `~/.gradle/init.gradle` 往 `pluginManagement.repositories` 塞镜像**：AGP 9 默认 `FAIL_ON_PROJECT_REPOS`，会直接构建失败。项目 `settings.gradle.kts` 自带 google/mavenCentral/gradlePluginPortal，走代理即可。
    - **Android 37 无纯 `android-37` 目录**，SDK 里叫 `android-37.0`（API 37 起改「主版本.次版本」命名）。AGP 按旧式 `android-37` 查找会报 `Failed to find target with hash string 'android-37'`。**解法：`ln -sfn android-37.0 /opt/sdk/android/platforms/android-37`**。
-   - ⚠️ **`flutter analyze` 全绿 ≠ 能编译**：`analyze` 只报 132 条既有问题，而 AOT 编译（CFE）会额外暴露 **66~68 条「引用 Flutter 私有 API」错误**，两者规则不同、互不覆盖。**判断编译可用性必须真跑 `flutter build apk`**。
-7. **基线（`origin/main` = `e252cd310`）本身无法用 Flutter 3.47.5 编译 APK**：AOT 报 66~68 条错误，集中在 22 个文件，均为引用 Flutter 3.47.5 已变更的私有 API（`textPainter` 改 `_textPainter`、`DraggableScrollableSheet` 私有类、`StandardBottomSheet`、`IndicatorPainter`、`rawText`/`hitTestBehavior`/`horizontalDragGestureRecognizer`/`flex`/`scrollDirection` 等命名参数）。**这与 9 项功能合并无关**（改动文件与报错文件交集为空；对比基线 68 条 vs 合并后 66 条，合并反而净减 2 条）。要出 APK 需另行处理这批私有 API 适配——属独立任务，不在「合并适配」范围内。
+   - **`flutter clean` 后必须重新 `flutter pub get`**，否则报 `.dart_tool/package_config.json does not exist`。
+   - ⚠️ **`flutter analyze` 全绿 ≠ 能编译**：`analyze` 只报既有问题，AOT 编译（CFE）会额外暴露「引用未打补丁 API」的错误，两者规则不同、互不覆盖。**判断编译可用性必须真跑 `flutter build apk`**。
 
 ## 七、当前状态（截至 2026-09-14）
 
