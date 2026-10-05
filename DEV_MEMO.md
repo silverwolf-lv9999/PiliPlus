@@ -165,6 +165,46 @@
 - 产物 release `v2.1.5.1`（已 PATCH name→`2.1.5.1` + 更新日志），3 个 APK：arm64-v8a / armeabi-v7a / x86_64，`2.1.5x1+5452`。
 - ⚠️ 沙箱无 Flutter SDK，未本地 analyze；以 CI 构建成功为准。
 
+### 2026-10-05 【发布】合并上游 2.1.6，构建 2.1.6x1（进行中）
+- 需求：把上游 2.1.6 全部更新合并进 PiliNova（fork/main），保留全部自研功能。
+- 合并：`git merge 2.1.6`（上游 2.1.5→2.1.6）。当前处于合并冲突状态，共 **17 个冲突文件**。
+- 冲突文件清单（git diff --diff-filter=U）：
+  - README.md
+  - lib/http/download.dart
+  - lib/http/video.dart
+  - lib/pages/audio/controller.dart
+  - lib/pages/download/detail/widgets/item.dart
+  - lib/pages/dynamics/widgets/author_panel.dart
+  - lib/pages/dynamics_mention/view.dart
+  - lib/pages/mine/view.dart
+  - lib/pages/setting/models/model.dart
+  - lib/pages/setting/models/recommend_settings.dart
+  - lib/pages/video/download_panel/view.dart
+  - lib/pages/video/reply/controller.dart
+  - lib/pages/video/reply_reply/controller.dart
+  - lib/pages/video/widgets/header_control.dart
+  - lib/services/audio_handler.dart
+  - lib/services/download/download_service.dart
+  - lib/utils/recommend_filter.dart
+- 已处理（据此前上下文）：README.md、lib/http/download.dart、lib/pages/audio/controller.dart、lib/services/audio_handler.dart（先删重复实现，直接复用 playNext/playPrev）。
+- 解决原则：保留 fork 自研功能（耳机控制、缓存听视频、合并缓存、推荐过滤、动态面板等），同时吸收上游改动。
+- 本回合逐个解决明细（全部已清空冲突标记）：
+  - `lib/utils/recommend_filter.dart`：上游抽出 `filterDuration` + 注释、`filter`→`filterWithExempt`；fork 有 `tagRegExp/enableTagFilter/filterTag/filterTagList`。→ 两者都留，filterAll 用 filterDuration + filterTag。
+  - `lib/pages/dynamics_mention/view.dart`：采用上游 `initialScrollOffset: offset` + 新增 `top` 形参（页面正文已用 `widget.top`），弃用 fork 的 postFrameCallback jumpTo（等效）。
+  - `lib/pages/mine/view.dart`：采用上游 `PlayerBar(left:/right:)` 新 API，保留 fork 的「发布记录」入口（`GStorage.reply != null || _hasPublishHistory` → `/hisPublished`），删掉上游重复的「评论记录」入口。
+  - `lib/pages/dynamics/widgets/author_panel.dart`：import 冲突，两者都要（`Utils.copyText` + `Pref.setBlackMid`）。
+  - `lib/pages/download/detail/widgets/item.dart`：import 冲突，两者都要（`SegmentType` + `AudioQuality`）；其余为 fork 缓存听视频分支 + 上游 Timer，已一致。
+  - `lib/pages/video/reply/controller.dart`：import 都要（`MentionItem` + `VideoDetailData`）。
+  - `lib/pages/video/reply_reply/controller.dart`：保留 fork 关于 `super.onClose()` 的注释。
+  - `lib/pages/video/widgets/header_control.dart`：采用上游结构（片段信息 Obx 移出 `!isFileSource` 并包 `if (plPlayerController.enableBlock)`），保留 fork 的本地文件「听音频」按钮（`if (isFileSource && !isFSOrPip)`）。
+  - `lib/pages/setting/models/model.dart`：`getBanWordModel` 采用上游 `banScope`（作用域提示）；`getBanWordListModel`（fork 新增）也改为 `banScope` 并在 getSubtitle 加作用域行，以适配调用点。
+  - `lib/pages/setting/models/recommend_settings.dart`：保留 fork 的「视频标签过滤」与「视频分区关键词过滤（列表版）」，banScope 透传。
+  - `lib/http/video.dart`：采用上游 `_filterHotAndRank`（并补 fork 的 `filterTag` 判断）+ 移除 fork 的 `_canAddRank` 重复实现；hot/rank 均保留 fork 的 `await filterByRealTags(list)`。
+  - `lib/services/download/download_service.dart`：downloadVideo/downloadBangumi 改为上游命名参数签名 + 追加 fork 的 audioOnly/audioQuality/merge；import 合并（audio_quality + android_helper + loading_state/sponsor_block/video + storage_pref + foundation show）；保留 fork 合并缓存画质反馈 toast + 上游 pgc segments 落盘。
+  - `lib/pages/video/download_panel/view.dart`：采用上游命名参数调用 + fork 的 audioOnly/audioQuality/merge；保留上游「当前网络」显示；补回被 git 漏掉的两个 import（`platform_utils.dart`、`connectivity_plus`）。
+- import 完整性校验：用「上游/HEAD 有而合并缺失的 import」脚本核对，仅剩 3 处为同一路径的写法差异（dart:io show 列表、foundation show、download/view 路径迁移）或无实际引用，均无害。
+- ⚠️ 沙箱无 Flutter SDK，未本地 analyze；以 CI 构建成功为准。
+
 ### 2026-09-15 【改名】应用显示名 PiliPlus → PiliMax（仅显示名，不动包名/import）
 - 用户确认：**只改显示名**（界面/桌面/关于显示的 app 名称），Dart 包名、`package:PiliPlus/` import（881 文件）、Android applicationId `com.example.piliplus`、源码目录一律不改，降低风险。
 - 改动：
