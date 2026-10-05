@@ -203,6 +203,8 @@
   - `lib/services/download/download_service.dart`：downloadVideo/downloadBangumi 改为上游命名参数签名 + 追加 fork 的 audioOnly/audioQuality/merge；import 合并（audio_quality + android_helper + loading_state/sponsor_block/video + storage_pref + foundation show）；保留 fork 合并缓存画质反馈 toast + 上游 pgc segments 落盘。
   - `lib/pages/video/download_panel/view.dart`：采用上游命名参数调用 + fork 的 audioOnly/audioQuality/merge；保留上游「当前网络」显示；补回被 git 漏掉的两个 import（`platform_utils.dart`、`connectivity_plus`）。
 - import 完整性校验：用「上游/HEAD 有而合并缺失的 import」脚本核对，仅剩 3 处为同一路径的写法差异（dart:io show 列表、foundation show、download/view 路径迁移）或无实际引用，均无害。
+- pubspec：自动合并到 `version: 2.1.6+1`、`flutter: 3.47.6`（`.fvmrc` 同步）；media-kit override 改为上游 `bggRGjQaUbCoE/media-kit.git`；CI 仍用 patch.ps1（已含上游新增 `double_tap_gesture.patch`）+ build.ps1，安卓默认构建偏好保留。
+- 合并提交 `1264fb075`，已推送 `fork/main`（`b3412e529..1264fb075`）。
 - ⚠️ 沙箱无 Flutter SDK，未本地 analyze；以 CI 构建成功为准。
 
 ### 2026-09-15 【改名】应用显示名 PiliPlus → PiliMax（仅显示名，不动包名/import）
