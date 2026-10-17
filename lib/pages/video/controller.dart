@@ -239,7 +239,7 @@ class VideoDetailController extends GetxController
   }
 
   @pragma('vm:notify-debugger-on-exception')
-  void _setVideoHeight() {
+  void _setVideoHeight({bool fromReset = false}) {
     try {
       var width = firstVideo.width;
       var height = firstVideo.height;
@@ -314,7 +314,10 @@ class VideoDetailController extends GetxController
             }
           }
         }
-      } else {
+      } else if (fromReset) {
+        // 仅在主动重载（切换画质/音质/语言等）时恢复展开；
+        // 首次加载播放地址期间用户可能已手动折叠头部，
+        // 此时强行展开会打断折叠态并造成「灰色、无法播放」的异常状态
         if (scrollCtr.offset != 0) {
           isExpanding = true;
           animationController.forward(from: 1 - scrollCtr.offset / videoHeight);
@@ -789,7 +792,11 @@ class VideoDetailController extends GetxController
     defaultST = null;
   }
 
-  bool isQuerying = false;
+  final RxBool isQuerying = false.obs;
+
+  /// 查询播放地址期间用户点击了「播放」：
+  /// 记录意图，待查询结束后由视图层继续执行播放
+  bool pendingPlay = false;
 
   final languages = Rxn<List<LanguageItem>>();
   final currLang = Rxn<String>();
@@ -837,14 +844,14 @@ class VideoDetailController extends GetxController
     if (isFileSource) {
       return initPlayerIfNeeded(autoFullScreenFlag);
     }
-    if (isQuerying) {
+    if (isQuerying.value) {
       return;
     }
-    isQuerying = true;
+    isQuerying.value = true;
     try {
       await _queryVideoUrl(fromReset, autoFullScreenFlag);
     } finally {
-      isQuerying = false;
+      isQuerying.value = false;
     }
   }
 
@@ -923,7 +930,7 @@ class VideoDetailController extends GetxController
             codecs: 'avc1',
             quality: videoQuality,
           );
-          _setVideoHeight();
+          _setVideoHeight(fromReset: fromReset);
           currentDecodeFormats = VideoDecodeFormatType.AVC;
           currentVideoQa.value = videoQuality;
           await initPlayerIfNeeded(autoFullScreenFlag);
@@ -968,7 +975,7 @@ class VideoDetailController extends GetxController
         (e) => currentDecodeFormats.codes.any(e.codecs!.startsWith),
         orElse: () => videosList.first,
       );
-      _setVideoHeight();
+      _setVideoHeight(fromReset: fromReset);
 
       videoUrl = VideoUtils.getCdnUrl(firstVideo.playUrls);
 

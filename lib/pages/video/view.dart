@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math';
 
@@ -90,6 +91,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     with RouteAware, RouteAwareMixin, WidgetsBindingObserver {
   final heroTag = Get.arguments['heroTag'];
 
+  /// 监听播放地址查询结束，处理「查询期间点击播放」的续播
+  StreamSubscription<bool>? _querySub;
+
   late final VideoDetailController videoDetailController;
   late final VideoReplyController _videoReplyController;
   PlPlayerController? plPlayerController;
@@ -153,6 +157,19 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     super.initState();
 
     videoDetailController = Get.put(VideoDetailController(), tag: heroTag);
+
+    // 查询播放地址期间用户点击了播放：查询成功后自动继续播放
+    _querySub = videoDetailController.isQuerying.listen((querying) {
+      if (querying ||
+          !videoDetailController.pendingPlay ||
+          videoDetailController.isFileSource ||
+          videoDetailController.videoUrl == null ||
+          videoDetailController.audioUrl == null) {
+        return;
+      }
+      videoDetailController.pendingPlay = false;
+      handlePlay();
+    });
 
     introController = _initIntroCtr();
 
@@ -308,8 +325,10 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   /// 未开启自动播放时触发播放
   Future<void>? handlePlay() {
     if (!videoDetailController.isFileSource) {
-      if (videoDetailController.isQuerying) {
+      if (videoDetailController.isQuerying.value) {
         if (kDebugMode) debugPrint('handlePlay: querying');
+        // 查询播放地址期间点击播放：记录意图，查询结束后自动继续
+        videoDetailController.pendingPlay = true;
         return null;
       }
       if (videoDetailController.videoUrl == null ||
@@ -317,6 +336,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         if (kDebugMode) {
           debugPrint('handlePlay: videoUrl/audioUrl not initialized');
         }
+        videoDetailController.pendingPlay = true;
         videoDetailController.queryVideoUrl();
         return null;
       }
@@ -342,6 +362,8 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
   @override
   void dispose() {
+    _querySub?.cancel();
+
     plPlayerController
       ?..removeStatusLister(playerListener)
       ..removePositionListener(positionListener);
@@ -455,7 +477,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         autoplay: videoDetailController.playerStatus?.isPlaying ?? false,
       );
     } else if (videoDetailController.plPlayerController.preInitPlayer &&
-        !videoDetailController.isQuerying &&
+        !videoDetailController.isQuerying.value &&
         videoDetailController.videoUrl != null) {
       videoDetailController.playerInit();
     }
@@ -734,10 +756,12 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
           child: GestureDetector(
             onTap: () {
               if (!videoDetailController.isFileSource) {
-                if (videoDetailController.isQuerying) {
+                if (videoDetailController.isQuerying.value) {
                   if (kDebugMode) {
                     debugPrint('handlePlay: querying');
                   }
+                  // 查询播放地址期间点击播放：记录意图，查询结束后自动继续
+                  videoDetailController.pendingPlay = true;
                   return;
                 }
                 if (videoDetailController.videoUrl == null ||
@@ -745,6 +769,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                   if (kDebugMode) {
                     debugPrint('handlePlay: videoUrl/audioUrl not initialized');
                   }
+                  videoDetailController.pendingPlay = true;
                   videoDetailController.queryVideoUrl();
                   return;
                 }

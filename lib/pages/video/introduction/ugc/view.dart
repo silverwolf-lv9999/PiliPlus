@@ -162,7 +162,7 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
                                   ..status.value = true
                                   ..queryVideoIntro();
                                 if (videoDetailCtr.videoUrl.isNullOrEmpty &&
-                                    !videoDetailCtr.isQuerying) {
+                                    !videoDetailCtr.isQuerying.value) {
                                   videoDetailCtr.queryVideoUrl();
                                 }
                               },
