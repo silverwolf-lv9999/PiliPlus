@@ -68,7 +68,7 @@
    - **⚠️ 最关键前提：构建前必须执行 `lib/scripts/patch.ps1`（本沙箱用等价的 `/opt/sdk/apply_patches.sh android`）**。该脚本给 **Flutter SDK 打 24 个补丁 + 给 `material_ui` 包打 9 个补丁**，把项目依赖的私有/扩展 API 恢复出来（`text_painter.patch` 暴露 `layoutCache`、`scrollable_gesture.patch` 给 `TabBarView` 加 `scrollDirection`/`hitTestBehavior`/`horizontalDragGestureRecognizer`、`scaffold.patch`/`draggable_scrollable_sheet.patch`/`selectable_region.patch` 暴露一堆私有成员等）。**漏跑此步会在 AOT 阶段报 66~68 条「未定义 getter / 无此命名参数」错误。**
    - 顺序要求：**`flutter pub get` 必须在打 material_ui 补丁之前**（`pub get` 会重新解包覆盖 pub-cache）。脚本已内置此顺序。
    - 沙箱用镜像源，包在 `~/.pub-cache/hosted/pub.flutter-io.cn/`（CI 是 `hosted/pub.dev/`）；注意 `material_ui` 包内是 `lib/src/tabs.dart`（不是 `lib/src/material/tabs.dart`）。
-   - 环境：Flutter 3.47.5 `/opt/sdk/flutter`、JDK17 `/root/.sdkman/candidates/java/17.0.20-tem`、Android SDK `/opt/sdk/android`（platform **android-37.0**、build-tools 37.0.0 / 自动补装 36.0.0、NDK 28.2.13676358）、Gradle 9.5.0 走 wrapper 缓存。
+   - 环境：Flutter 3.47.7 `/opt/sdk/flutter`（随 .fvmrc 升级；切换版本后 SDK 工作区补丁会被 `git reset --hard` 清掉，需重跑 `apply_patches.sh`）、JDK17 `/root/.sdkman/candidates/java/17.0.20-tem`、Android SDK `/opt/sdk/android`（platform **android-37.0**、build-tools 37.0.0 / 自动补装 36.0.0、NDK 28.2.13676358）、Gradle 9.5.0 走 wrapper 缓存。
    - 一键环境：`source /opt/sdk/build_env.sh`（含代理与镜像变量）。
    - 启动代理：`nohup /usr/local/bin/mihomo -d /root/.config/mihomo &`。**踩坑：mihomo 首次启动会因为下载 `geoip.metadb` 失败而 fatal 退出**；实际配置是 `geodata-mode: true`（用本地 `GeoIP.dat`），直接再启动一次即可成功。
    - **sdkmanager 只认 `HTTP_PROXY` 环境变量**，不认 `https_proxy`、也不认 JVM 的 `-Dhttps.proxyHost`（改脚本硬编码也没用）。另：自带的 cmdline-tools 12.0 太旧、列不出新包，需换 19.0。
@@ -88,6 +88,20 @@
 ## 九、更新 / 修改日志
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
+
+### 2026-10-18 【修复】视频详情页折叠后灰色无法播放 + 合并上游 2.1.6.2（本地已验证，待推送）
+- **折叠 bug 修复**（`b538ad2e3`，4 文件 +45/-13）：
+  - 根因：`autoPlay=false + preInitPlayer=true` 下，首次加载播放地址期间用户已手动折叠头部时，`_setVideoHeight` 的 else 分支把「用户主动折叠」误判为「尺寸未校正的中间态」而强行展开（`isExpanding=true` + `forward`），折叠态被破坏、播放工具条被强制隐藏呈灰色；同时查询期间点击播放被 `handlePlay` 静默丢弃（`isQuerying` 早退无提示）。
+  - 修复一：`_setVideoHeight({bool fromReset = false})`，else 展开仅保留给显式重载（切画质/音质/语言），首次加载不再撤销用户折叠。
+  - 修复二：`isQuerying` 改 `RxBool` + 新增 `pendingPlay`；查询期间点击记录意图，查询结束且 URL 就绪后由视图层 `StreamSubscription` 自动续播 `handlePlay()`（dispose 中 cancel）。
+  - 验证：Linux integration_test 复现脚本实测——修复前日志出现 `setVideoHeight-else-expand`、`pinnedHeight` 从 56 跳为 animHeight；修复后无 else-expand，`queryVideoUrl END` 紧接自动 `handlePlay enter`（pendingPlay 生效），截图确认展开播放、弹幕正常、无灰色死区。
+- **合并上游 2.1.6.2**（`b2d6a5b`，19 个提交，合并提交 `26134ccbc`）：
+  - 冲突 2 处：`AndroidHelper.java` 与 `lib/utils/android/android_helper.dart`——上游删除了 `PiliAndroidHelper.openLinkVerifySettings` Dart 包装（about 页改直连 `AndroidHelper.openLinkVerifySettings` 绑定），fork 保留 `mergeM4sToMp4`（下载合并功能，Java+Dart 双侧）。
+  - ⚠️ **教训**：合并时 import 区被上游版本覆盖（无 `androidx.annotation.Keep`），而冲突解决若保留 fork 的 `@Keep` 注解会直接编译失败（`cannot find symbol: Keep`）。上游 2.1.6.2 已改用 proguard-rules.pro 的 `-keep class com.example.piliplus.AndroidHelper { public *; }` + `$ToDart`，注解应删。已删；两冲突文件现与上游仅差 `mergeM4sToMp4` 一段。
+  - pubspec/lock：与上游一致（flutter 3.47.7、tray_manager 0.8.0、waterfall_flow→flutter_staggered_grid_view、material_ui ^1.0.0）。⚠️ **官方构建流程会「删除 material_ui 包 → pub get 重解析」**，实际拿到的是当时最新满足版（本次 1.7.0），tabs.patch 等 9 个 material_ui 补丁在 1.7.0 上应用正常。
+  - fork 特性核查：applicationId `test.piliplus.com`、media_kit My-Responsitories overrides、m4s 合并、哔哩清风 SponsorBlock、PiliNova 命名/CI 产物前缀全部保留。
+- **本地构建验证（沙箱）**：Flutter 3.47.7（`/opt/sdk/flutter`，运行 `apply_patches.sh android` 打 24 个 SDK 补丁 + 9 个 material_ui 补丁；**该 bash 脚本原本漏了 `double_tap_gesture.patch`，已补上**，官方 patch.ps1 一直都有），`flutter analyze lib/` 0 error（44 条既有 info/warning），`flutter build apk --release --dart-define-from-file=pili_release.json --no-pub` **成功**（69.1MB，R8/proguard 已启用通过）。
+- ⚠️ 未推送、未发 Release（等用户授权与 tag 命名）。
 
 ### 2026-09-28 【入口调整 + 版本号修复】弹幕记录并入「我的」页；versionCode 147 → 5474
 - **背景**：用户实测反馈两点——① 弹幕记录入口在消息页，小屏设备可能显示不全看不到；② 编译出的 APK 版本号错误（显示为 1 量级，而历史版本已 5000+）。
