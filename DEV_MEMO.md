@@ -89,6 +89,15 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-10-19 【修改】检查更新地址切换到本仓库 + 发版 2.1.6.2x1
+- 需求：应用内「检查更新」此前走上游 API，检测到的更新是上游 `bggRGjQaUbCoE/PiliPlus` 的版本；改为检测本 fork `Silverwolf-LV9999/PiliPlus`。
+- 改动（2 文件各 1 行）：
+  - `lib/http/api.dart`：`Api.latestApp`（`Update.checkUpdate` 实际请求的 releases API）`bggRGjQaUbCoE` → `Silverwolf-LV9999`。
+  - `lib/common/Constants.dart`：`Constants.sourceCodeUrl`（commit 链接、下载回退链 `/releases/latest`、issues、关于页展示）同步切换。
+  - 说明：下载按钮用的是 API 返回的 `browser_download_url`，自动跟随新仓库；`pubspec.yaml` 中 `bggRGjQaUbCoE/audio_service` git 依赖是**依赖源仓库**，与本仓库账号无关且本账号下无此 fork，**不改**。
+- 验证：`flutter analyze lib/` 0 error（44 既有 info）；实测 `api.github.com/repos/Silverwolf-LV9999/PiliPlus/releases` 返回 200 且已有历史 release（最新 v2.1.6.1，2026-10-05，早于本轮构建日期，不会误报更新）；`xN` 版本号经 `build.ps1` 仅作 `displayVersion`（应用内展示/文件名/release 名），pubspec 仍写合法三段，v2.1.5x2 已有先例。
+- 发版：tag `v2.1.6.2.1`（tag 惯例 `上游版本号.X`），`app_version=2.1.6.2x1`，仅安卓，产物 `PiliNova_android_2.1.6.2x1+<buildNumber>_<abi>.apk`。
+
 ### 2026-10-18 【修复】视频详情页折叠后灰色无法播放 + 合并上游 2.1.6.2（本地已验证，待推送）
 - **折叠 bug 修复**（`b538ad2e3`，4 文件 +45/-13）：
   - 根因：`autoPlay=false + preInitPlayer=true` 下，首次加载播放地址期间用户已手动折叠头部时，`_setVideoHeight` 的 else 分支把「用户主动折叠」误判为「尺寸未校正的中间态」而强行展开（`isExpanding=true` + `forward`），折叠态被破坏、播放工具条被强制隐藏呈灰色；同时查询期间点击播放被 `handlePlay` 静默丢弃（`isQuerying` 早退无提示）。
