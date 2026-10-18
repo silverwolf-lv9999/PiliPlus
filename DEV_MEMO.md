@@ -97,6 +97,7 @@
   - 说明：下载按钮用的是 API 返回的 `browser_download_url`，自动跟随新仓库；`pubspec.yaml` 中 `bggRGjQaUbCoE/audio_service` git 依赖是**依赖源仓库**，与本仓库账号无关且本账号下无此 fork，**不改**。
 - 验证：`flutter analyze lib/` 0 error（44 既有 info）；实测 `api.github.com/repos/Silverwolf-LV9999/PiliPlus/releases` 返回 200 且已有历史 release（最新 v2.1.6.1，2026-10-05，早于本轮构建日期，不会误报更新）；`xN` 版本号经 `build.ps1` 仅作 `displayVersion`（应用内展示/文件名/release 名），pubspec 仍写合法三段，v2.1.5x2 已有先例。
 - 发版：tag `v2.1.6.2.1`（tag 惯例 `上游版本号.X`），`app_version=2.1.6.2x1`，仅安卓，产物 `PiliNova_android_2.1.6.2x1+<buildNumber>_<abi>.apk`。
+- ✅ **已发布**（2026-10-19）：run `39144816821` 安卓 job 16 分钟全步骤通过；release `v2.1.6.2.1` 指向提交 `407dbedc2`（即本次修改 HEAD，tag 与 APK 同源）；产物 3 个（arm64 24.7MB / armeabi-v7a 24.6MB / x86_64 25.6MB），apksigner 验证 `CN=PiliPlus` 发布证书 v2 scheme 有效，aapt2 确认 versionName=`2.1.6.2x1`、versionCode=5546、包名 `test.piliplus.com`。已同步更新 workbuddy 分享页（https://aaeb1502fff277192.app.workbuddy.host ）为正式产物。
 
 ### 2026-10-18 【修复】视频详情页折叠后灰色无法播放 + 合并上游 2.1.6.2（本地已验证，待推送）
 - **折叠 bug 修复**（`b538ad2e3`，4 文件 +45/-13）：
