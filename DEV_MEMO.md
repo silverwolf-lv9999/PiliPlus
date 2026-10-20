@@ -106,7 +106,14 @@
 - 单测：34/34 通过；改动文件 analyze 0 issue。
 - 诊断面板代码保留为 `const kDiag = bool.fromEnvironment('DIAG')`（默认关闭、release 中被裁剪），**正式推送前删除**。
 - 本地实测包：`2.1.6.2x5` / versionCode 5590（aapt2 验证包名 `test.piliplus.com`）；分享页已更新并验证页面与 APK 均 200：https://aaeb1502fff277192.app.workbuddy.host
-- ⚠️ 代码未推送、未发 Release（等用户装机确认）。
+- 用户装机确认修复有效（2026-10-20）。
+- 追加调整：
+  - 移除第四轮的「播放后 320ms 强制拉回顶部」（可能打断用户滚动，现由 `playerListener` 正常展开）；
+  - 关于页：`Source Code` 保留本仓库，原「本 fork 仓库」改为「上游仓库」`https://github.com/bggRGjQaUbCoE/PiliPlus`。
+- ✅ **已推送 main**：`b465d766b`（修复 + 关于页）、`2e042fb57`（移除强制展开）。
+- ✅ **已发版**（2026-10-20）：删除旧的 `v2.1.6.2.1`（该版未修复成功）；新 Release **tag/版本号均为 `2.1.6.2x1`**（与上游区分），CI run `39374799621` 安卓 job 全部通过，产物 3 个（arm64 24.7MB / v7a 24.6MB / x86_64 25.6MB），`BUILD_NAME=2.1.6.2x1`、`BUILD_NUMBER=5549`。Release 说明已写入（同步上游 2.1.6.2 + 折叠变灰修复的根因与改动）。
+  - 链接：https://github.com/silverwolf-lv9999/PiliPlus/releases/tag/2.1.6.2x1
+  - ⚠️ versionCode 5549 < 本地测试包 x5（5590），从测试包切正式版需先卸载（签名也不同）。
 
 ### 2026-10-19 【修复】折叠灰色死区第四轮（真实根因）：折叠态点击按 `playedTime` 分流 → 封面背后播放（登录态台架复现，待推送）
 - 用户补充的关键触发条件（决定性）：**打开视频、尚未播放时，让视频播放区域缩小（折叠头部）→ 变灰**；而「先点播放→暂停→再折叠」不会触发。即：`autoPlay=false` 的折叠态才是死区入口，与「点不点播放」无关。
