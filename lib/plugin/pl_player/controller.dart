@@ -136,6 +136,10 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   bool _autoPlay = false;
 
+  /// 供播放页在 setDataSource 进行中写入播放意图：
+  /// 初始化完成时 _initializePlayer 会读取该值并自动播放
+  set autoPlay(bool value) => _autoPlay = value;
+
   // 记录历史记录
   int? _aid;
   String? _bvid;

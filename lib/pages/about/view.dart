@@ -181,12 +181,12 @@ Commit Hash: ${BuildConfig.commitHash}''',
           ),
           ListTile(
             onTap: () => PageUtils.launchURL(
-              'https://github.com/silverwolf-lv9999/PiliPlus',
+              'https://github.com/bggRGjQaUbCoE/PiliPlus',
             ),
             leading: const Icon(Icons.fork_right),
-            title: const Text('本 fork 仓库'),
+            title: const Text('上游仓库'),
             subtitle: Text(
-              'https://github.com/silverwolf-lv9999/PiliPlus',
+              'https://github.com/bggRGjQaUbCoE/PiliPlus',
               style: subTitleStyle,
             ),
           ),

@@ -348,6 +348,24 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
       if (plPlayerController.autoEnterFullScreen) {
         plPlayerController.triggerFullScreen();
       }
+      // 预初始化失败/被跳过时播放器尚未就绪，此时 play() 为空转，
+      // 会留下「封面已移除、播放器不渲染」的灰色死区；
+      // 回退到初始化路径，保证一定可以播放
+      final notReady = !videoDetailController.videoState.value ||
+          plPlayerController.videoController == null;
+      if (notReady) {
+        if (plPlayerController.processing) {
+          // setDataSource 进行中：把播放意图写入播放器，
+          // 初始化完成时 _initializePlayer 读取到 true 后会自动播放，
+          // 否则会留下「封面已移除、播放器 paused 静止」的灰色死区
+          plPlayerController.autoPlay = true;
+          return null;
+        }
+        return videoDetailController.playerInit(
+          autoplay: true,
+          autoFullScreenFlag: true,
+        );
+      }
       return plPlayerController.play();
     } else {
       return videoDetailController.playerInit(
@@ -745,45 +763,72 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     return Obx(
       () {
         final scrollRatio = videoDetailController.scrollRatio.value;
-        if (scrollRatio == 0) {
+        // 未进入播放态（封面仍在）时不渲染折叠工具栏：
+        // 封面层本身带有点击层与返回/主页图标，再盖一层不透明 surface
+        // 会让整块视频区变成一块灰（预初始化完成但从未播放时的典型表现）
+        if (scrollRatio == 0 || !videoDetailController.autoPlay) {
           return const SizedBox.shrink();
         }
         return Positioned.fill(
           bottom: -1,
           child: GestureDetector(
-            onTap: () {
-              if (!videoDetailController.isFileSource) {
-                if (videoDetailController.isQuerying.value) {
-                  if (kDebugMode) {
-                    debugPrint('handlePlay: querying');
-                  }
-                  // 查询播放地址期间点击播放：记录意图，查询结束后自动继续
-                  videoDetailController.pendingPlay = true;
-                  return;
-                }
-                if (videoDetailController.videoUrl == null ||
-                    videoDetailController.audioUrl == null) {
-                  if (kDebugMode) {
-                    debugPrint('handlePlay: videoUrl/audioUrl not initialized');
-                  }
-                  videoDetailController.pendingPlay = true;
-                  videoDetailController.queryVideoUrl();
-                  return;
-                }
-              }
-              if (plPlayerController == null ||
-                  videoDetailController.playedTime == null) {
-                handlePlay();
-              } else {
-                plPlayerController!.onDoubleTapCenter();
-              }
-            },
+            onTap: _handleOverlayTap,
             behavior: .opaque,
             child: _buildOverlayToolBar(scrollRatio),
           ),
         );
       },
     );
+  }
+
+  /// 折叠态点击：唯一目标是「让视频可见且在播」。
+  /// 不能按 playedTime 分流——预初始化/有观看进度时 playedTime 可能已非 null，
+  /// 此时走 onDoubleTapCenter 会在封面背后开始播放（autoPlay 仍为 false，
+  /// 封面不消失、头部不展开），表现为「点不动 / 一直灰」。
+  void _handleOverlayTap() {
+    if (!videoDetailController.isFileSource) {
+      if (videoDetailController.isQuerying.value) {
+        if (kDebugMode) {
+          debugPrint('handlePlay: querying');
+        }
+        // 查询播放地址期间点击播放：记录意图，查询结束后自动继续
+        videoDetailController.pendingPlay = true;
+        return;
+      }
+      if (videoDetailController.videoUrl == null ||
+          videoDetailController.audioUrl == null) {
+        if (kDebugMode) {
+          debugPrint('handlePlay: videoUrl/audioUrl not initialized');
+        }
+        videoDetailController.pendingPlay = true;
+        videoDetailController.queryVideoUrl();
+        return;
+      }
+    }
+    final pl = plPlayerController ?? videoDetailController.plPlayerController;
+    if (!videoDetailController.autoPlay || !pl.playerStatus.isPlaying) {
+      // 未开始播放 / 暂停中 / 封面未移除（播放器在封面背后播放）：
+      // 走 handlePlay，保证同步 autoPlay、移除封面并真正播放
+      handlePlay();
+      // 点击折叠条的唯一目的是看视频：若仍在折叠态，等一帧后展开，
+      // 避免「已经播了但头部仍是灰条/缩小态」的观感
+      Future.delayed(const Duration(milliseconds: 320), () {
+        if (!mounted) return;
+        final sc = videoDetailController.scrollCtr;
+        if (sc.hasClients &&
+            sc.offset > 0 &&
+            videoDetailController.autoPlay &&
+            pl.playerStatus.isPlaying) {
+          sc.animateTo(
+            0,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } else {
+      pl.onDoubleTapCenter();
+    }
   }
 
   Widget get childWhenDisabledLandscape => Obx(
@@ -1244,40 +1289,43 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     onPopInvokedWithResult:
         videoDetailController.plPlayerController.onPopInvokedWithResult,
     child: Obx(
-      () =>
-          !videoDetailController.videoState.value ||
-              !videoDetailController.autoPlay ||
-              plPlayerController?.videoController == null
-          ? const SizedBox.shrink()
-          : PLVideoPlayer(
-              maxWidth: width,
-              maxHeight: height,
-              plPlayerController: plPlayerController!,
-              videoDetailController: videoDetailController,
-              introController: introController,
-              headerControl: HeaderControl(
-                key: videoDetailController.headerCtrKey,
-                isPortrait: isPortrait,
-                controller: videoDetailController.plPlayerController,
-                videoDetailCtr: videoDetailController,
-                heroTag: heroTag,
-              ),
-              danmuWidget: isPipMode && pipNoDanmaku
-                  ? null
-                  : Obx(
-                      () => PlDanmaku(
-                        key: ValueKey(videoDetailController.cid.value),
-                        isPipMode: isPipMode,
-                        cid: videoDetailController.cid.value,
-                        playerController: plPlayerController!,
-                        isFullScreen: plPlayerController!.isFullScreen.value,
-                        isFileSource: videoDetailController.isFileSource,
-                        size: Size(width, height),
-                      ),
-                    ),
-              showEpisodes: showEpisodes,
-              showViewPoints: showViewPoints,
-            ),
+      () {
+        final show = videoDetailController.videoState.value &&
+            videoDetailController.autoPlay &&
+            plPlayerController?.videoController != null;
+        if (!show) {
+          return const SizedBox.shrink();
+        }
+        return PLVideoPlayer(
+          maxWidth: width,
+          maxHeight: height,
+          plPlayerController: plPlayerController!,
+          videoDetailController: videoDetailController,
+          introController: introController,
+          headerControl: HeaderControl(
+            key: videoDetailController.headerCtrKey,
+            isPortrait: isPortrait,
+            controller: videoDetailController.plPlayerController,
+            videoDetailCtr: videoDetailController,
+            heroTag: heroTag,
+          ),
+          danmuWidget: isPipMode && pipNoDanmaku
+              ? null
+              : Obx(
+                  () => PlDanmaku(
+                    key: ValueKey(videoDetailController.cid.value),
+                    isPipMode: isPipMode,
+                    cid: videoDetailController.cid.value,
+                    playerController: plPlayerController!,
+                    isFullScreen: plPlayerController!.isFullScreen.value,
+                    isFileSource: videoDetailController.isFileSource,
+                    size: Size(width, height),
+                  ),
+                ),
+          showEpisodes: showEpisodes,
+          showViewPoints: showViewPoints,
+        );
+      },
     ),
   );
 
@@ -1495,7 +1543,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         plPlayer(width: width, height: height),
 
         Obx(() {
-          if (!videoDetailController.autoPlay) {
+          // autoPlay 已置 true 但播放器尚未就绪（初始化失败/被跳过）时，
+          // 保持封面与点击层，避免出现无法播放的灰色死区
+          final coverShow = !videoDetailController.autoPlay ||
+              !videoDetailController.videoState.value ||
+              videoDetailController.plPlayerController.videoController ==
+                  null;
+          if (coverShow) {
             return Positioned.fill(
               child: GestureDetector(
                 onTap: handlePlay,

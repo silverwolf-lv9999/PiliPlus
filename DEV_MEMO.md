@@ -89,6 +89,82 @@
 
 > 记录每次发布与主要代码改动的历史，做新任务前先看最近一条确认当前基线与“已完成/未完成”。
 
+### 2026-10-19 【修复】折叠灰色死区第五轮：折叠工具栏覆盖层盖住封面（诊断面板定位，待推送）
+- 第四轮（x4）未解决。用户安装带状态面板的诊断包（`--dart-define=DIAG=true`）后截图对比：
+  - 未触发：`ap=false vs=true vc=true pt=null play=false ratio=1.00`
+  - 触发：`ap=false vs=true vc=true pt=1000 play=false ratio=0.39`
+  - **除 `pt` 外状态完全一致** → 推翻「点击路由」作为灰块主因的判断（仍保留其修复）。
+- 真正根因：`_buildHeaderOverlay` 在 `scrollRatio > 0` 时渲染一层<b>不透明</b> `Container(color: colorScheme.surface)` 的折叠工具栏。
+  - 开启「提前初始化播放器」后，播放器已就绪但从未播放（`autoPlay=false`）→ `plPlayer` 不渲染，视频区底下是**封面**；
+  - 一上滑折叠，这层不透明灰直接盖在封面上 → 整块视频区变灰；播放过的视频封面已移除、播放器在渲染，观感"正常"。
+  - 这也解释了「只有 preInitPlayer 才触发」（不预初始化时折叠态下 `videoState=false`，封面层与播放器都不在，行为不同）。
+- 修复（`lib/pages/video/view.dart`）：
+  1. `_buildHeaderOverlay`：`scrollRatio == 0 || !videoDetailController.autoPlay` 时**不渲染**该覆盖层——未进入播放态时视频区保持封面（封面层自带点击与返回/主页图标），不再变灰；
+  2. `_handleOverlayTap`：按真实播放状态路由（未播放/暂停 → `handlePlay`；播放中 → 暂停），并在播放后自动展开，避免「播了但停在折叠态」；
+  3. 保留第三轮兜底（processing 写意图、onInit 补播）与第二轮封面互补条件。
+- 台架复现（登录态、真实账号）：`REPRO_PROGRESS=1000` + 滑动 64px → 得到 `pt=1000 / ratio=0.36 / off=64`，与用户截图状态完全一致；修复后同一状态截图显示**封面**而非灰块。
+- 单测：34/34 通过；改动文件 analyze 0 issue。
+- 诊断面板代码保留为 `const kDiag = bool.fromEnvironment('DIAG')`（默认关闭、release 中被裁剪），**正式推送前删除**。
+- 本地实测包：`2.1.6.2x5` / versionCode 5590（aapt2 验证包名 `test.piliplus.com`）；分享页已更新并验证页面与 APK 均 200：https://aaeb1502fff277192.app.workbuddy.host
+- ⚠️ 代码未推送、未发 Release（等用户装机确认）。
+
+### 2026-10-19 【修复】折叠灰色死区第四轮（真实根因）：折叠态点击按 `playedTime` 分流 → 封面背后播放（登录态台架复现，待推送）
+- 用户补充的关键触发条件（决定性）：**打开视频、尚未播放时，让视频播放区域缩小（折叠头部）→ 变灰**；而「先点播放→暂停→再折叠」不会触发。即：`autoPlay=false` 的折叠态才是死区入口，与「点不点播放」无关。
+- 用户同时提供了**登录账号 Cookie** 与**两个不触发视频**（`BV19jnG6kEHT`、`BV1HCpS6iEXh`），用于差分实验。Cookie 仅用于本会话台架，未写入仓库。
+- 登录态 API 差分：4 个视频（2 触发 `BV1KXJD6BENT`/`BV1G5po6zECY` + 2 不触发）的 view API 元数据、`last_play_cid`/`last_play_time` 均无差异（都为空）→ 排除「续播 seek 时序」假设；差异来自应用内点击路由。
+- **真实根因**：`lib/pages/video/view.dart` 的 `_buildHeaderOverlay().onTap` 用 `playedTime == null` 决定分支：
+  - `playerInit` 末尾有 `playedTime = seek;`（fork 为避免首帧心跳误报进度而加）。**只要该视频有观看进度（登录+看过），`seek` 非 null → `playedTime` 在预初始化完成时即为非 null**；
+  - 非 null 时点击走 `plPlayerController.onDoubleTapCenter()` → `playOrPause()` → **后端确实开始播放，但页面 `autoPlay` 仍为 false** → 封面不消失、`plPlayer` 不渲染、头部不展开 → 用户看到「灰块、点了像没反应」；
+  - 台架实测（F1，种子 `watchProgress` + 直接调用该分支）：`playing=true / autoPlay=false / coverShow=true` —— 播放器在封面背后播放，正是用户所见。
+  - 「播放→暂停→折叠」不触发的原因：此时 `autoPlay` 已为 true、封面已移除，同一路径下画面可见，所以用户观感正常。
+- **修复**：抽出 `_handleOverlayTap()`，按**真实播放状态**而非 `playedTime` 路由：
+  - `!videoDetailController.autoPlay || !pl.playerStatus.isPlaying` → `handlePlay()`（未播放/暂停/封面仍在/播放器在封面背后播放），复用第三轮的 processing 写意图、pendingPlay、onInit 补播兜底；
+  - 正在播放 → `onDoubleTapCenter()`（保持「点击暂停」语义）；
+  - 查询中 / URL 未就绪的 pendingPlay 逻辑原样保留。
+- 台架验证（登录态 + 真实账号）：
+  - 4 场景全部收敛到 `autoPlay=true, playing=true, coverShow=false, scrollOffset=0`（头部自动展开）：有进度+折叠+点击 / 无进度+折叠+点击 / 播放→暂停→折叠→点击 / 21:9 11P 长视频 `BV1G5po6zECY`；
+  - 单测新增 4 例（旧路由「封面背后播放」复现、新路由未播放/暂停恢复/播放中暂停）→ **全量 34/34 通过**；改动文件 `flutter analyze` 0 issue。
+- 台架基础设施备忘（复现台架时注意）：
+  - 登录注入走应用自身路径：`LoginAccount(BiliCookieJar.fromJson(map), null, null).onChange()` + `Accounts.refresh()`（Hive `account` box）；
+  - **必须用 `Get.toNamed` 而非 `offAllNamed`**：后者销毁首页，首页 dispose 会 `GStorage.close()` 关闭所有 Hive box，导致后续 `Pref.xxx` 读取抛 `HiveError` 并使点按静默失效；
+  - `RouteAwareMixin` 对 `Get.routing.route` 做强转，导航过渡期可能为 null → 台架需临时 null 安全；
+  - 台架把 `Pref.autoUpdate` 的更新检查屏蔽，避免「发现新版本」弹窗遮挡。
+- **本地实测包已出**：`flutter build apk --release --dart-define-from-file=pili_release.json --build-name=2.1.6.2x4 --build-number=5570 --no-pub` 成功（69.1MB）；aapt2 验证 `test.piliplus.com` / versionName `2.1.6.2x4` / versionCode 5570（debug 签名，用户覆盖安装）。分享页已更新为 x4 并验证页面与 APK 均 200：https://aaeb1502fff277192.app.workbuddy.host 。构建后已 `git checkout -- pubspec.yaml pubspec.lock` 还原临时 `material_ui: 1.5.0` override（CI 不受影响）。
+- ⚠️ 代码未推送、未发 Release（等用户装机实测确认后授权）。实测重点：**打开视频后先别点播放，直接上滑折叠，再点灰条**——应正常播放并自动展开；两个触发视频 `BV1KXJD6BENT` / `BV1G5po6zECY` + 之前触发过的其他视频；回归「先播放→暂停→折叠→点击」与「播放中点击折叠条暂停」。
+
+### 2026-10-19 【修复】折叠灰色死区第三轮：覆盖「setDataSource 进行中点击」时序（本地台架端到端验证，待推送）
+- 背景：第二轮修复（2026-10-19 上一条）经用户装机实测**对部分视频仍无效**（BV1KXJD6BENT 1440×1080 4:3、BV1G5po6zECY 1920×800 21:9 11P 长视频）。
+- 本轮定位结论（Linux 台架 + 代码级推演，详见下）：
+  - 两个问题视频在匿名台架上**不能直接复现**（登录态/seek/后端 fijk vs media_kit 差异），说明触发依赖时序竞态而非视频内容本身——「部分视频」= 流地址慢/初始化耗时不同导致点击落入不同窗口。
+  - 真实死区机制（第二轮未覆盖的缝隙）：`handlePlay` 命中 `processing=true`（`setDataSource` 仍在 `await _createVideoController`）时**旧代码直接 `return null` 且无任何后续动作**；初始化完成时 `setDataSource` 的 `_autoPlay` 已被置为 `autoplay:false`（预初始化路径），`_initializePlayer` 不自动播 → 最终 `autoPlay=true + videoState=true + 播放器 paused 静止`，封面已移除、播放器渲染但不动 = 用户看到的「灰色无法播放」。
+  - 另一缝隙：点击发生在 `_initializePlayer` **已读过** `_autoPlay` 之后、`onInit` 之前时，写入播放意图也来不及，同样停在 paused。
+- 修复（3 文件，全部是「播放意图」在不同时序点上的传递，无重复初始化）：
+  1. `lib/plugin/pl_player/controller.dart`：新增 `set autoPlay(bool)`（写 `_autoPlay`，供播放页在初始化进行中写入意图）。
+  2. `lib/pages/video/view.dart` `handlePlay`：`processing` 分支改为 `plPlayerController.autoPlay = true`（初始化完成时 `_initializePlayer` 读到即自动播），不再空手返回。
+  3. `lib/pages/video/controller.dart` `playerInit` 的 `onInit`：`autoPlay && !playerStatus.isPlaying` 时补 `play()`——堵住 `_initializePlayer` 已读旧值后的缝隙（不变式：页面 autoPlay=true 且初始化成功就必定在播）。
+- 验证：
+  - 单测 `test/pages/video/fold_deadzone_test.dart` 扩到 **8 例全过**（新增：setDataSource 进行中点击→意图写入→初始化完成自动播放；`_initializePlayer` 读旧值后→onInit 补播）；`flutter test` 全量 30/30 通过；`dart analyze` 四个改动文件 0 issue。
+  - Linux 台架端到端（`REPRO` 环境变量插桩，用后已全删）：复现并走通「`initPlayerIfNeeded SKIPPED` → 点击 fallback `playerInit(autoplay:true)` → **初始化进行中二次点击 → `mark autoPlay=true`** → `onInit OK` → `isPlaying=true` → `plPlayerObx show=true / coverShow=false`（无死区）」完整路径；BV1KXJD6BENT / BV1G5po6zECY 首屏预初始化路径亦正常。
+  - 台架结论：首屏单链里 `isQuerying` 与 `processing` 互相覆盖（`_queryVideoUrl` 内 `await initPlayerIfNeeded`），命中 `processing` 分支须经「预初始化被跳过/失败 → fallback 初始化中」或换 P/改画质路径——与「部分视频+登录态更易命中」（登录有 lastPlayTime→seek、部分流 init 慢）吻合。
+- ⚠️ **本地环境坑（重要，非代码问题）**：本沙箱 Flutter 3.47.7 + `material_ui` 解析到 **1.7.0 时 kernel 编译失败**（1.7.0 移除了仓库依赖的私有 API：`StandardBottomSheet`/`TabBarState` 等，报错集中在 `lib/common/widgets/**` 既存文件）。1.5.0（pub cache 里仍有）可编译。这是**沙箱本地现象，CI 用其自己的 SDK/依赖版本不受影响，不要提交 `dependency_overrides`**。本地构建 APK 时临时在 `pubspec.yaml` 的 `dependency_overrides` 加 `material_ui: 1.5.0`，构建完 `git checkout -- pubspec.yaml pubspec.lock` 还原。
+- **本地实测包已出**（2026-10-19）：`flutter build apk --release --dart-define-from-file=pili_release.json --build-name=2.1.6.2x3 --build-number=5560 --no-pub` 成功（69.1MB 通用包），aapt2 验证 包名 `test.piliplus.com`、versionName `2.1.6.2x3`、versionCode 5560；debug 签名（沙箱无 release keystore，用户以自有方式覆盖安装），版本号高于 CI 正式包 5546 不触发降级。分享页已更新为 x3 并发布：https://aaeb1502fff277192.app.workbuddy.host （页面/APK 均 200 验证；x3 为主下载，x1 CI 正式三 ABI 包保留为备选）。用户装机实测选择整包覆盖（与 x2 同包名，直接覆盖）。
+- ⚠️ 代码未推送、未发 Release（等用户装机实测确认后授权）。实测重点：BV1KXJD6BENT / BV1G5po6zECY（x2 仍触发的两个视频）+ 用户手里其他能触发的视频；路径：自动播放关 + preInitPlayer 开 + 登录态，进入详情页加载期间/完成瞬间快速点击封面（多点几次制造竞态）。修复授权后预计发版 tag `v2.1.6.2.2` / app_version `2.1.6.2x3`。
+
+### 2026-10-19 【修复】折叠灰色死区第二轮修复（preInitPlayer 死区，本地已验证，待推送）
+- 背景：2026-10-18 第一轮折叠修复后用户仍复现「灰色无法播放」。用户逐层锁定条件：仅部分视频触发 → 同视频登录才触发 → 非默认设置 → **最终定位 `preInitPlayer=true` 是触发开关，且官方版开启该设置无此 bug**。
+- 根因（代码级确认的死区机制）：
+  - `plPlayer` 渲染条件 `!videoState || !autoPlay || videoController == null → SizedBox.shrink()`，封面层条件 `if (!autoPlay)`——**`autoPlay=true` 而播放器未就绪时 = 播放器不渲染 + 封面被移除 = 灰色/黑色死区**；此时 `handlePlay` 的 preInitPlayer 分支只会调 `play()`，而 `play()` 在 `videoController == null` 时是**静默无操作**（仅把 playerStatus 置为 playing 的假状态，触发展开动画后仍是无法播放的播放区）→ 每次点击都空转，死区永久保持。
+  - fork 与上游 2.1.6.2 的**全量差异已逐字核对**：`view.dart`/`controller.dart` 仅差上轮两处改动（pendingPlay 机制 + `_setVideoHeight(fromReset)` 守卫），`pl_player` 与上游完全一致（合并提交后无 fork 改动）。上游丢弃查询期间点击，不会进入该窗口；fork 的 pendingPlay 监听器在 `isQuerying=false` 时**同步触发 `handlePlay`**，恰逢预初始化失败/被跳过的窗口 → 死区。
+  - 预初始化失败/被跳过的路径：`setDataSource` 的 catch 错误路径与 `_playerCount == 0` 提前返回**都不触发 `onInit`**（`videoState` 永假）；`initPlayerIfNeeded` 的 `videoPlayerKey.currentState?.mounted != true` 或 `processing` 也会整体跳过初始化。「部分视频+登录态」对应不同流地址/画质下这些路径更易命中。
+- 修复（`lib/pages/video/view.dart`，两处防御，互为兜底）：
+  1. `handlePlay` 的 preInitPlayer 分支：播放器未就绪（`!videoState || videoController == null`）时**回退 `playerInit(autoplay: true, autoFullScreenFlag: true)`**，保证点击一定能播；`processing` 中则等待（封面仍在，可再次点击）。
+  2. 封面层条件与播放器渲染条件互补：`!autoPlay || !videoState || videoController == null` 时保持封面与点击层——**任何"autoPlay=true 但播放器不渲染"的状态都不再可能出现**。
+- 回归测试：新增 `test/pages/video/fold_deadzone_test.dart`（6 例，与三处真实代码条件一一对应的状态机仿真）：旧逻辑死区复现（点击后播放器不渲染/封面移除/无重新初始化）、新逻辑回退初始化并播放、pendingPlay 自动续播不变式（无死区区间）、预初始化被跳过时点击可自愈、预初始化成功时新旧行为一致（无重复初始化）。
+- 验证：`flutter analyze lib/ test/` 0 新增 issue（44 既有 info）；`flutter test` 全量 **28/28 通过**。
+- **本地实测包已出**（2026-10-19，用户选择先本地实测再决定推送）：`flutter build apk --release --dart-define-from-file=pili_release.json --build-name=2.1.6.2x2 --build-number=5550 --no-pub` 成功（69.1MB 通用包），aapt2 验证 包名 `test.piliplus.com`、versionName `2.1.6.2x2`、versionCode 5550（高于 CI 正式包 5546，不会降级），应用内展示版本 2.1.6.2x2（pili.name）；debug 签名（沙箱无 release keystore，用户以自有方式覆盖安装）。已更新分享页并发布：https://aaeb1502fff277192.app.workbuddy.host （页面/APK 均 200 验证）。
+  - ⚠️ 环境备注：后台 shell 默认无 `ANDROID_HOME`/`JAVA_HOME`，构建前需 `export ANDROID_HOME=/opt/sdk/android JAVA_HOME=/root/.sdkman/candidates/java/17.0.20-tem`；Gradle 走 `~/.gradle/gradle.properties` 里的 mihomo 代理（127.0.0.1:7890），代理未启动时构建报 socket exception，需先 `nohup /usr/local/bin/mihomo -d /root/.config/mihomo &`。本地为浅克隆，`build.sh` 算出的 versionCode（499）不可信，本次显式传 `--build-number=5550`；构建后已 `git checkout -- pubspec.yaml` 还原。
+- ⚠️ 代码未推送、未发 Release（等用户实测确认后授权）。
+
 ### 2026-10-19 【修改】检查更新地址切换到本仓库 + 发版 2.1.6.2x1
 - 需求：应用内「检查更新」此前走上游 API，检测到的更新是上游 `bggRGjQaUbCoE/PiliPlus` 的版本；改为检测本 fork `Silverwolf-LV9999/PiliPlus`。
 - 改动（2 文件各 1 行）：

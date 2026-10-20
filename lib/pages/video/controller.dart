@@ -763,6 +763,11 @@ class VideoDetailController extends GetxController
       videoType: videoType,
       onInit: () {
         videoState.value = true;
+        // 播放意图已表达（autoPlay=true）但播放器尚未播放：
+        // 覆盖 setDataSource 期间点击、_initializePlayer 已读取旧 _autoPlay 的时序缝隙
+        if (autoPlay && !plPlayerController.playerStatus.isPlaying) {
+          plPlayerController.play();
+        }
         setSubtitle(vttSubtitlesIndex.value);
       },
       width: firstVideo.width,
