@@ -810,22 +810,6 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
       // 未开始播放 / 暂停中 / 封面未移除（播放器在封面背后播放）：
       // 走 handlePlay，保证同步 autoPlay、移除封面并真正播放
       handlePlay();
-      // 点击折叠条的唯一目的是看视频：若仍在折叠态，等一帧后展开，
-      // 避免「已经播了但头部仍是灰条/缩小态」的观感
-      Future.delayed(const Duration(milliseconds: 320), () {
-        if (!mounted) return;
-        final sc = videoDetailController.scrollCtr;
-        if (sc.hasClients &&
-            sc.offset > 0 &&
-            videoDetailController.autoPlay &&
-            pl.playerStatus.isPlaying) {
-          sc.animateTo(
-            0,
-            duration: const Duration(milliseconds: 240),
-            curve: Curves.easeOut,
-          );
-        }
-      });
     } else {
       pl.onDoubleTapCenter();
     }
