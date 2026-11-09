@@ -1,33 +1,43 @@
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
+part of 'base_quality.dart';
 
-enum AudioQuality {
-  auto(0, '自动选择最佳音质'),
-  u_100010(100010, '100010'),
-  u_100009(100009, '100009'),
-  u_100008(100008, '100008'),
-  hiRes(30251, 'Hi-Res无损'),
-  dolby_30250(30250, '杜比全景声'),
-  dolby_30255(30255, '杜比全景声'),
-  k192(30280, '192K'),
-  k132(30232, '132K'),
-  k64(30216, '64K'),
-  ;
+class AudioQuality extends BaseQuality {
+  /// 音质优先级，数值越大音质越高。未知音质为 0。
+  final int rank;
 
-  final int code;
-  final String desc;
-
-  const AudioQuality(this.code, this.desc);
+  const AudioQuality(super.code, super.desc, {this.rank = 0});
 
   /// 「自动选择最佳音质」项的内部标识码，不参与实际音轨匹配。
   static const int autoCode = 0;
 
-  static final _codeMap = {for (final i in values) i.code: i};
+  /// 「自动选择最佳音质」：rank 高于所有具体音质，
+  /// 因而按 rank 匹配时必然命中当前视频可用的最高音质。
+  static const AudioQuality auto = .new(autoCode, '自动选择最佳音质', rank: 1000);
 
-  static AudioQuality fromCode(int code) => _codeMap[code]!;
+  // 历史遗留的高位音质码，实际不会有对应音轨；
+  // 选中时按 rank 自然回落到可用最高音质。
+  static const AudioQuality u_100010 = .new(100010, '100010', rank: 90);
+  static const AudioQuality u_100009 = .new(100009, '100009', rank: 85);
+  static const AudioQuality u_100008 = .new(100008, '100008', rank: 80);
+
+  static const AudioQuality hiRes = .new(30251, 'Hi-Res无损', rank: 60);
+  static const AudioQuality dolby_30255 = .new(30255, '杜比全景声', rank: 50);
+  static const AudioQuality dolby_30250 = .new(30250, '杜比全景声', rank: 50);
+  static const AudioQuality k192 = .new(30280, '192K', rank: 40);
+  static const AudioQuality k132 = .new(30232, '132K', rank: 30);
+  static const AudioQuality k64 = .new(30216, '64K', rank: 20);
+
+  static const List<AudioQuality> values = [
+    hiRes,
+    dolby_30255,
+    dolby_30250,
+    k192,
+    k132,
+    k64,
+  ];
 
   /// 设置页「默认音质 / 蜂窝网络音质」可选项。
-  /// 将「自动选择最佳音质」置于列表最前，其余保持原有顺序。
-  static final List<AudioQuality> defaultAudioQualityOptions = [
+  /// 「自动选择最佳音质」置于列表最前。
+  static const List<AudioQuality> defaultAudioQualityOptions = [
     auto,
     u_100010,
     u_100009,
@@ -40,50 +50,11 @@ enum AudioQuality {
     k64,
   ];
 
-  /// 自动选择时的优先级：高级音效优先，其后按码率从高到低。
-  /// Hi-Res → 杜比全景声(30250/30255) → 192K → 132K → 64K。
-  /// 三种高级音效互斥，同一视频最多只有一种，故其内部顺序不影响结果。
-  static const List<int> autoPriority = [
-    30251, // Hi-Res 无损
-    30250, // 杜比全景声
-    30255, // 杜比全景声
-    30280, // 192K
-    30232, // 132K
-    30216, // 64K
-  ];
+  static final _codeMap = {
+    for (final i in defaultAudioQualityOptions) i.code: i,
+  };
 
-  /// 依据当前视频实际可用的音轨 [availableIds]，挑选要使用的音质码。
-  ///
-  /// - [preferQa] 为 [autoCode]（即用户选了「自动选择最佳音质」）时，
-  ///   按 [autoPriority] 顺序返回第一个可用的音质码；都不可用时回退到
-  ///   原有的「不超过默认值中最高者」逻辑，保证不劣于改动前。
-  /// - [preferQa] 为具体音质码时，行为与改动前完全一致。
-  static int selectAudioQuality(
-    int preferQa,
-    Iterable<int> availableIds, {
-    int fallbackQa = 30280,
-  }) {
-    final ids = availableIds.toList();
-    if (ids.isEmpty) return preferQa;
-    if (preferQa == autoCode) {
-      for (final code in autoPriority) {
-        if (ids.contains(code)) return code;
-      }
-      // 无任何已知音轨：取码率最高者
-      var best = ids.first;
-      for (final id in ids) {
-        if (id > best) best = id;
-      }
-      return best;
-    }
-    int closest = ids.findClosestTarget(
-      (e) => e <= preferQa,
-      (a, b) => a > b ? a : b,
-    );
-    if (!ids.contains(preferQa) && ids.any((e) => e > preferQa)) {
-      closest = fallbackQa;
-    }
-    return closest;
-  }
+  AudioQuality.fromId(super.code) : rank = 0, super.fromId();
+
+  factory AudioQuality.fromCode(int code) => _codeMap[code] ?? .fromId(code);
 }
-

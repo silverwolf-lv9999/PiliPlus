@@ -22,7 +22,7 @@ import 'package:PiliPlus/http/constants.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/video.dart';
 import 'package:PiliPlus/models/common/audio_normalization.dart';
-import 'package:PiliPlus/models/common/video/audio_quality.dart';
+import 'package:PiliPlus/models/common/video/base_quality.dart';
 import 'package:PiliPlus/models/common/video/video_type.dart';
 import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart'
     show BiliDownloadEntryInfo;
@@ -45,6 +45,7 @@ import 'package:PiliPlus/services/shutdown_timer_service.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/android/android_helper.dart';
 import 'package:PiliPlus/utils/connectivity_utils.dart';
+import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
@@ -535,15 +536,11 @@ class AudioController extends GetxController
           return;
         }
         position.value = 0;
-        // 「自动选择最佳音质」开启时按优先级挑最优音轨；否则维持原有就近匹配。
-        final int selectedAudioId = AudioQuality.selectAudioQuality(
-          cacheAudioQa,
-          audios.map((e) => e.id),
-          fallbackQa: AudioQuality.k192.code,
-        );
-        final audio = audios.firstWhere(
-          (e) => e.id == selectedAudioId,
-          orElse: () => audios.first,
+        // 按 rank 匹配：autoCode 时取可用最高音质
+        final targetRank = AudioQuality.fromCode(cacheAudioQa).rank;
+        final audio = audios.findTargetMedia(
+          (e) => AudioQuality.fromCode(e.id).rank,
+          targetRank,
         );
         _onOpenMedia(VideoUtils.getCdnUrl(audio.playUrls), volume: volume);
       } else if (playInfo.hasPlayUrl()) {

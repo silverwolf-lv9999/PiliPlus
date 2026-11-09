@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:PiliPlus/common/skeleton/video_reply.dart';
 import 'package:PiliPlus/common/sliver_single_child_delegate.dart';
 import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/colored_box_transition.dart';
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
@@ -16,6 +15,7 @@ import 'package:PiliPlus/common/widgets/view_safe_area.dart';
 import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/pages/common/reply/reply_footer_mixin.dart';
 import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
 import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:PiliPlus/pages/video/reply_reply/controller.dart';
@@ -24,7 +24,6 @@ import 'package:PiliPlus/utils/app_scheme.dart';
 import 'package:PiliPlus/utils/extension/widget_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
-import 'package:PiliPlus/utils/parse_string.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
@@ -68,17 +67,13 @@ class VideoReplyReplyPanel extends CommonSlidePage {
   final bool isNested;
   final Int64? upMid;
 
-  @override
-  State<VideoReplyReplyPanel> createState() => _VideoReplyReplyPanelState();
-
   static Future<void>? toReply({
     required int oid,
     required int rootId,
-    String? rpIdStr,
+    int? rpId,
     required int type,
     Uri? uri,
   }) {
-    final rpId = parseIntOrNull(rpIdStr);
     return Get.to(
       arguments: {
         'oid': oid,
@@ -114,35 +109,38 @@ class VideoReplyReplyPanel extends CommonSlidePage {
       ),
     );
   }
+
+  @override
+  State<VideoReplyReplyPanel> createState() => _VideoReplyReplyPanelState();
 }
 
 class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
-    with SingleTickerProviderStateMixin, CommonSlideMixin {
-  late VideoReplyReplyController _controller;
+    with SingleTickerProviderStateMixin, CommonSlideMixin, ReplyFooterMixin {
+  @override
+  late final VideoReplyReplyController controller;
   late final _tag = Utils.makeHeroTag('${widget.rpid}${widget.dialog}');
-  Animation<Color?>? _colorAnimation;
-
+  @override
+  ColorScheme get colorScheme => theme.colorScheme;
   late final bool isDialogue = widget.dialog != null;
 
   /// 数据与动作的来源：子面板用父控制器，普通面板用自己。
-  VideoReplyReplyController get _data => widget.owner ?? _controller;
+  VideoReplyReplyController get _data => widget.owner ?? controller;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _colorAnimation = null;
-    final controller = PrimaryScrollController.of(context);
-    _controller
+    final scrollSontroller = PrimaryScrollController.of(context);
+    controller
       ..didChangeDependencies(context)
-      ..nestedController = controller is ExtendedNestedScrollController
-          ? controller
+      ..nestedController = scrollSontroller is ExtendedNestedScrollController
+          ? scrollSontroller
           : null;
   }
 
   @override
   void initState() {
     super.initState();
-    _controller = Get.put(
+    controller = Get.put(
       VideoReplyReplyController(
         hasRoot: widget.firstFloor != null,
         id: widget.id,
@@ -168,8 +166,8 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
   }
 
   @override
-  Widget buildPage(ThemeData theme) {
-    Widget child() => enableSlide ? slideList(theme) : buildList(theme);
+  Widget buildPage() {
+    Widget child() => enableSlide ? slideList() : buildList();
     return SimpleColoredBox(
       color: theme.canvasColor,
       child: MiniScaffold(
@@ -207,14 +205,13 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
     );
   }
 
-  ReplyInfo? get firstFloor =>
-      widget.firstFloor ?? _controller.firstFloor.value;
+  ReplyInfo? get firstFloor => widget.firstFloor ?? controller.firstFloor.value;
 
   ScrollController get scrollController =>
-      _controller.nestedController ?? _controller.scrollController;
+      controller.nestedController ?? controller.scrollController;
 
   @override
-  Widget buildList(ThemeData theme) {
+  Widget buildList() {
     return refreshIndicator(
       onRefresh: _data.onRefresh,
       isClampingScrollPhysics: widget.isNested,
@@ -224,12 +221,12 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           if (!isDialogue) ...[
-            if ((widget.firstFloor ?? _controller.firstFloor.value)
+            if ((widget.firstFloor ?? controller.firstFloor.value)
                 case final firstFloor?)
               _header(theme, firstFloor)
             else
               Obx(() {
-                final firstFloor = _controller.firstFloor.value;
+                final firstFloor = controller.firstFloor.value;
                 if (firstFloor == null) {
                   return const SliverToBoxAdapter();
                 }
@@ -237,11 +234,11 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
               }),
             Obx(() {
               // 整树折叠时不显示分隔行
-              _controller.collapsedRpids.length;
+              controller.collapsedRpids.length;
               return _sortWidget(
                 theme.colorScheme,
                 hide: Pref.replyTreeEnabled &&
-                    _controller.collapsedRpids.contains(Int64(widget.rpid)),
+                    controller.collapsedRpids.contains(Int64(widget.rpid)),
               );
             }),
           ],
@@ -281,11 +278,11 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
             () {
               final state = _data.loadingState.value;
               // 订阅折叠状态变化，避免嵌套 Obx 导致生命周期冲突
-              _controller.collapsedRpids.length;
+              controller.collapsedRpids.length;
               // 整树折叠：不渲染任何树行
               if (!isDialogue &&
                   Pref.replyTreeEnabled &&
-                  _controller.collapsedRpids.contains(Int64(widget.rpid))) {
+                  controller.collapsedRpids.contains(Int64(widget.rpid))) {
                 return const SliverToBoxAdapter();
               }
               return _buildBody(theme.colorScheme, state);
@@ -313,9 +310,9 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
               ? _HeaderGuide(
                   headerRpid: widget.rpid,
                   colorScheme: colorScheme,
-                  collapsedRpids: _controller.collapsedRpids,
-                  onToggleCollapse: _controller.toggleCollapse,
-                  hoveredLine: _controller.hoveredLine,
+                  collapsedRpids: controller.collapsedRpids,
+                  onToggleCollapse: controller.toggleCollapse,
+                  hoveredLine: controller.hoveredLine,
                   child: replyItem,
                 )
               : replyItem,
@@ -399,8 +396,8 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
           ? _SortStripGuide(
               headerRpid: widget.rpid,
               colorScheme: colorScheme,
-              onToggleCollapse: _controller.toggleCollapse,
-              hoveredLine: _controller.hoveredLine,
+              onToggleCollapse: controller.toggleCollapse,
+              hoveredLine: controller.hoveredLine,
               child: padding,
             )
           : padding,
@@ -431,15 +428,15 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
     final availableWidth = MediaQuery.sizeOf(context).width;
     final indent = ReplyTreeIndent(base: availableWidth <= 640 ? 40 : 44);
     final treeMaxDepth = Pref.replyTreeMaxDepth;
-    final jumpIndex = _controller.index.value;
+    final jumpIndex = controller.index.value;
     // 子面板只显示以本面板 rpid 为根的子树；普通面板显示整层。
     // 注意这一份 list 只用于渲染，不能用来索引 —— 见下面的 dataIndexOf。
-    final list = _controller.subtreeData;
+    final list = controller.subtreeData;
     final useTree = !isDialogue && Pref.replyTreeEnabled;
     // 树输入：有效 flat（保留被屏蔽 + 合成缺失父）+ suppressed 映射
-    final input = _controller.treeInput;
+    final input = controller.treeInput;
     final wholeTreeCollapsed = useTree &&
-        _controller.collapsedRpids.contains(Int64(widget.rpid));
+        controller.collapsedRpids.contains(Int64(widget.rpid));
     // flatIndex 会被 view 的 onDelete/onReply 用于索引 _data 的列表；
     // 子面板渲染用的 flat 是子树派生的子集，顺序与下标都不同，必须映射回真实下标。
     final dataIndexOf = widget.owner != null
@@ -460,14 +457,19 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
         : buildReplyTree(
             flat: input.flat,
             rootId: Int64(widget.rpid),
-            collapsed: _controller.collapsedRpids,
+            collapsed: controller.collapsedRpids,
             maxDepth: treeMaxDepth,
             indexOf: dataIndexOf,
           );
     return SuperSliverList.builder(
-      listController: _controller.listController,
+      listController: controller.listController,
       itemBuilder: (context, index) {
         if (index == rows.length) {
+          // 上游的「折叠评论」入口优先：有 foldCard 时先展示卡片，
+          // 由用户点击再拉取，避免自动翻页跳过折叠区。
+          if (_data.foldCard != null) {
+            return buildFooter();
+          }
           // 有未消费的错误时不再自动重试，等用户点重试，避免失败风暴
           if (_data.loadMoreError.value == null) {
             _data.onLoadMore();
@@ -522,9 +524,9 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
                     indent: indent,
                     colorScheme: colorScheme,
                     headerRpid: widget.rpid,
-                    collapsedRpids: _controller.collapsedRpids,
-                    onToggleCollapse: _controller.toggleCollapse,
-                    hoveredLine: _controller.hoveredLine,
+                    collapsedRpids: controller.collapsedRpids,
+                    onToggleCollapse: controller.toggleCollapse,
+                    hoveredLine: controller.hoveredLine,
                   ),
           ReplyTreeDeepLink(:final depth, :final rpid, :final count) =>
             _DeepLinkRow(
@@ -540,9 +542,9 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
               indent: indent,
               colorScheme: colorScheme,
               headerRpid: widget.rpid,
-              collapsedRpids: _controller.collapsedRpids,
-              onToggleCollapse: _controller.toggleCollapse,
-              hoveredLine: _controller.hoveredLine,
+              collapsedRpids: controller.collapsedRpids,
+              onToggleCollapse: controller.toggleCollapse,
+              hoveredLine: controller.hoveredLine,
               onOpen: () {
                 final dataList = _data.loadingState.value.data;
                 ReplyInfo? target;
@@ -574,16 +576,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
             ),
         };
         if (jumpIndex == index) {
-          return ColoredBoxTransition(
-            color: _colorAnimation ??= _controller.animController.drive(
-              ColorTween(
-                begin: colorScheme.onInverseSurface,
-                end: colorScheme.surface,
-                // 前0.8s不变, 后0.2s开始动画
-              ).chain(CurveTween(curve: const Interval(0.8, 1.0))),
-            ),
-            child: child,
-          );
+          return controller.colorAnimWrapper(colorScheme, child);
         }
         return child;
       },
@@ -612,7 +605,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
         ),
       ),
       jumpToDialogue: () {
-        if (!_controller.setIndexById(replyItem.parent)) {
+        if (!controller.setIndexById(replyItem.parent)) {
           SmartDialog.showToast('评论可能已被删除');
         }
       },

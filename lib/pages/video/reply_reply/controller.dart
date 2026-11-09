@@ -2,9 +2,11 @@ import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo, DetailListReply, Mode;
 import 'package:PiliPlus/grpc/reply.dart';
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/common/reply/reply_sort_type.dart';
 import 'package:PiliPlus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:PiliPlus/pages/common/publish/publish_route.dart';
-import 'package:PiliPlus/pages/common/reply_controller.dart';
+import 'package:PiliPlus/pages/common/reply/fold/reply_fold_mixin.dart';
+import 'package:PiliPlus/pages/common/reply/reply_controller.dart';
 import 'package:PiliPlus/pages/video/reply_new/view.dart';
 import 'package:PiliPlus/pages/video/reply_reply/reply_tree.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
@@ -13,11 +15,13 @@ import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 class VideoReplyReplyController extends ReplyController
-    with GetSingleTickerProviderStateMixin {
+    with
+        GetSingleTickerProviderStateMixin,
+        ReplyLocateMixin,
+        BaseReplyFoldMixin {
   VideoReplyReplyController({
     required this.hasRoot,
     required this.id,
@@ -31,9 +35,11 @@ class VideoReplyReplyController extends ReplyController
   final int? dialog;
   int? id;
   // 视频aid 请求时使用的oid
+  @override
   int oid;
   // rpid 请求楼中楼回复
   int rpid;
+  @override
   int replyType;
 
   /// 继承自父面板的被屏蔽评论数据（rpid → ReplyInfo）
@@ -88,16 +94,13 @@ class VideoReplyReplyController extends ReplyController
     }
   }
 
-  AnimationController? _controller;
-  AnimationController get animController => _controller ??= AnimationController(
-    duration: const Duration(milliseconds: 1000),
-    vsync: this,
-  );
-
   late final horizontalPreview = Pref.horizontalPreview;
 
   @override
   dynamic get sourceId => replyType == 1 ? IdUtils.av2bv(oid) : oid;
+
+  @override
+  ReplySortType get prefSortType => Pref.reply2SortType;
 
   @override
   void onInit() {
@@ -126,10 +129,9 @@ class VideoReplyReplyController extends ReplyController
   bool customHandleResponse(bool isRefresh, Success response) {
     final data = response.response;
 
-    subjectControl = data.subjectControl;
-    upMid ??= data.subjectControl.upMid;
-    paginationReply = data.paginationReply;
-    isEnd = data.cursor.isEnd;
+    if (isRefresh) {
+      haneleSubjectControl(data.subjectControl);
+    }
 
     if (data is DetailListReply) {
       if (isRefresh) {
@@ -143,7 +145,14 @@ class VideoReplyReplyController extends ReplyController
         setIndexById(Int64(id!), data.root.replies);
         id = null;
       }
+
+      getFoldCard(data.mixedCards);
     }
+
+    hanelePagination(
+      cursor: data.cursor,
+      offset: data.paginationReply.nextOffset,
+    );
 
     return false;
   }
@@ -188,7 +197,7 @@ class VideoReplyReplyController extends ReplyController
   @pragma('vm:notify-debugger-on-exception')
   void jumpToItem(int index) {
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      animController.forward(from: 0);
+      colorAnimController.forward(from: 0);
       try {
         // ignore: invalid_use_of_visible_for_testing_member
         final offset = listController.getOffsetToReveal(index, 0.25);
@@ -211,7 +220,7 @@ class VideoReplyReplyController extends ReplyController
             oid: oid,
             root: rpid,
             dialog: dialog!,
-            offset: paginationReply?.nextOffset,
+            offset: nextOffset,
           )
         : ReplyGrpc.detailList(
             type: replyType,
@@ -219,7 +228,7 @@ class VideoReplyReplyController extends ReplyController
             root: rpid,
             rpid: id ?? 0,
             mode: mode,
-            offset: paginationReply?.nextOffset,
+            offset: nextOffset,
             removedOut: _removedReplies,
           );
   }
@@ -232,7 +241,7 @@ class VideoReplyReplyController extends ReplyController
     // 刷新前清空上一轮收集的被屏蔽评论，请求返回后 detailList 重新收集
     _removedReplies.clear();
     // super 链（ReplyController → CommonListController）负责重置
-    // paginationReply / cursorNext / subjectControl / page，并以 isRefresh=true 取数
+    // nextOffset / cursorNext / subjectControl / page，并以 isRefresh=true 取数
     return super.onRefresh();
   }
 
@@ -294,14 +303,14 @@ class VideoReplyReplyController extends ReplyController
             FloorLoad.done) {
           break;
         }
-        final beforeOffset = paginationReply?.nextOffset;
+        final beforeOffset = nextOffset;
         await queryData(false);
         floorLoaded.value = dedupeRepliesById(
           loadingState.value.data ?? const [],
         ).length;
         if (!_completing) break;
         // 用真实“游标是否推进”重算一次，避免空转
-        final advanced = paginationReply?.nextOffset != beforeOffset;
+        final advanced = nextOffset != beforeOffset;
         if (decideFloorLoad(
               floorTotal: count.value,
               floorLoaded: floorLoaded.value,
@@ -400,8 +409,6 @@ class VideoReplyReplyController extends ReplyController
   @override
   void onClose() {
     cancelFloorCompletion();
-    _controller?.dispose();
-    _controller = null;
     // 必须是 super.onClose()：继承链上唯一的 dispose() 是 get 包的
     // ListNotifierMixin.dispose，它不向上链式调用，导致 CommonController 的
     // scrollController.dispose() 与 ReplyController 的 savedReplies.clear()

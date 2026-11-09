@@ -1,5 +1,7 @@
 package com.example.piliplus;
 
+import static com.example.piliplus.MediaHelper.getRemoteAction;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -43,8 +45,6 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Map;
-
-import static com.example.piliplus.MediaHelper.getRemoteAction;
 
 public final class AndroidHelper {
     public static final boolean isFoldable;
@@ -426,6 +426,19 @@ public final class AndroidHelper {
                 }
             }
         }
+    }
+
+    public static String manufacturer() {
+        return Build.MANUFACTURER;
+    }
+
+    public static boolean isChromeOS() {
+        PackageManager pm = getContext().getPackageManager();
+        if (Build.VERSION.SDK_INT >= 27 && pm.hasSystemFeature(PackageManager.FEATURE_PC)) {
+            return true;
+        }
+        return pm.hasSystemFeature("org.chromium.arc") || pm.hasSystemFeature("org.chromium.arc.device_management")
+                || (Build.DEVICE != null && Build.DEVICE.matches(".+_cheets|cheets_.+"));
     }
 
     public static final class ToDart {

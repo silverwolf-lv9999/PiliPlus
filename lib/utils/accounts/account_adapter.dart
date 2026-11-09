@@ -13,19 +13,23 @@ class LoginAccountAdapter extends TypeAdapter<LoginAccount> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
+    // 兼容 fork 旧数据：field 4 曾用于 bool(replyAccountInitialized)，
+    // 上游同一位置是 String(buvid)。按运行时类型区分，避免升级后读取崩溃。
+    final field4 = fields[4];
     return LoginAccount(
       fields[0] as DefaultCookieJar,
       fields[1] as String?,
       fields[2] as String?,
       (fields[3] as List?)?.cast<AccountType>().toSet(),
-      fields[4] == true,
+      field4 is String ? field4 : null,
+      fields[5] as bool? ?? (field4 is bool ? field4 : true),
     );
   }
 
   @override
   void write(BinaryWriter writer, LoginAccount obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.cookieJar)
       ..writeByte(1)
@@ -35,6 +39,8 @@ class LoginAccountAdapter extends TypeAdapter<LoginAccount> {
       ..writeByte(3)
       ..write(obj.type.toList())
       ..writeByte(4)
+      ..write(obj.buvid)
+      ..writeByte(5)
       ..write(obj.replyAccountInitialized);
   }
 
