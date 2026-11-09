@@ -32,6 +32,7 @@ release tag `2.2.0x1`。
 
 - 「自动选择最佳音质」接入上游 rank 模型：以 `rank: 1000` 参与匹配，仍取可用最高音质。
 - 账号数据升级不崩：上游 `buvid` 占用 Hive field 4，`replyAccountInitialized` 挪到 field 5，读取时按运行时类型兼容旧数据。
+- CI 构建不再受 GitHub release 大文件 504 影响：构建前预热 `kotlin-compiler-embeddable` 与 media_kit 的 libmpv jar（详见 [docs/PITFALLS.md](docs/PITFALLS.md) 1.13）。
 
 ## [2.1.6.2x1] - 2026-10-20
 

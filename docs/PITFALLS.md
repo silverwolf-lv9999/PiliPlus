@@ -64,6 +64,14 @@
 - **根因**：`/opt/flutter` 是 3.0.0 的老 SDK 且在默认 `PATH` 前面；项目用的是 `/opt/sdk/flutter`（3.47.9）。
 - **做法**：每次显式 `export PATH=/opt/sdk/flutter/bin:$PATH`（后台 shell 不会继承之前会话的 PATH）。
 
+### 1.13 CI 拉 `kotlin-compiler-embeddable` / libmpv jar 失败
+- **现象**：CI 在 `Flutter Build Release Apk` 失败，日志是 `Could not HEAD ... com.android.application.gradle.plugin-9.1.0.jar`（`Connect to 127.0.0.1:7890 failed`）或 `kotlin-compiler-embeddable-2.3.20` 下载 `504`；换成本地跑则卡在 media_kit 的 `downloadDependencies`。
+- **根因**：两层。① runner 或沙箱残留了指向本机代理的配置，代理不在时直接 `Connection refused`；② Maven Central 对部分大体积构件 302 到 GitHub release，而 Flutter Gradle 插件（included build）与 media_kit 的 libmpv jar 都走这条通道，GitHub 侧大文件偶发 `504` / TLS 握手超时，且 `downloadDependencies` 不做重试，一次失败整条构建完蛋。这与代码无关，重跑也可能仍失败。
+- **做法**：本地先 `grep -i proxy ~/.gradle/gradle.properties` 确认没有失效代理；CI 侧在构建前插入两个预热步骤（`.github/workflows/build.yml`），按内容哈希把构件塞进缓存：
+  - `Prewarm kotlin compiler cache`：从 `maven.aliyun.com` / `repo.maven.apache.org` 取 jar，按 **sha1** 放到 `~/.gradle/caches/modules-2/files-2.1/<group>/<artifact>/<ver>/<sha1>/`，Gradle 命中后不再下载；
+  - `Prewarm media_kit libmpv jars`：`patch.ps1` 已跑过 `pub get`，在 `~/.pub-cache/git/media-kit-*/libs/android/media_kit_libs_android_video/android/build/20260906/` 按 **sha256** 预置三个 ABI 的 jar，其 `downloadDependencies` 校验通过就跳过下载。镜像按 `gh-proxy.com` → `ghproxy.net` → `ghfast.top` → 直连 依次回退（实测 gh-proxy 也可能 504，是 ghfast 兜住的）。
+  - 预热失败时**不要** `exit 1`，留 `::warning::` 让 Gradle 自己再试一次——GitHub 恢复时不该被预热步骤拦住。
+
 ---
 
 ## 2. 合并上游与发布一致性
