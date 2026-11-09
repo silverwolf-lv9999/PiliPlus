@@ -8,9 +8,30 @@
 
 ## [Unreleased]
 
+（暂无）
+
+## [2.2.0x1] - 2026-11-09
+
+release tag `2.2.0x1`。
+
 ### Changed
 
-- 重构项目文档：新增 `AGENTS.md`（AI 入口）、`CLAUDE.md`、`CHANGELOG.md`、`docs/`（架构 / 构建 / 踩坑）；原 `DEV_MEMO.md` 归档到 `docs/archive/`，不再维护。
+- 同步上游 2.2.0 / 2.2.0.1 / 2.2.0.2（跨越 3 个版本，274 文件），fork 自研功能全部保留：
+  - 音质 / 画质模型重构为 `BaseQuality` sealed class（`part` 文件），新增 `rank`，选流统一走 `VideoUtils.findTargetAudio` / `findTargetVideo`；
+  - 评论体系重构为 `lib/pages/common/reply/`，新增折叠评论卡片、大表情动画、跳转高亮；
+  - 「我的」页由单卡片改为 tab 架构（收藏 / 历史 / 稍后再看 / 订阅）；
+  - 设置页拆分 `dm_settings` / `dyn_settings` / `play_settings` / `reply_settings`；
+  - Flutter 3.47.9（Dart 3.13.7）、material_ui 1.9.0。
+- 项目文档重构：新增 `AGENTS.md`（AI 入口）、`CLAUDE.md`、`CHANGELOG.md`、`docs/`（架构 / 构建 / 踩坑）；`DEV_MEMO.md` 归档到 `docs/archive/`，不再维护。
+
+### Removed
+
+- 「我的」页卡片自定义排序（被上游 tab 架构取代，`MineCardType` 三个文件与 `mineCardSort` 设置项一并移除）。
+
+### Fixed
+
+- 「自动选择最佳音质」接入上游 rank 模型：以 `rank: 1000` 参与匹配，仍取可用最高音质。
+- 账号数据升级不崩：上游 `buvid` 占用 Hive field 4，`replyAccountInitialized` 挪到 field 5，读取时按运行时类型兼容旧数据。
 
 ## [2.1.6.2x1] - 2026-10-20
 

@@ -49,6 +49,21 @@
 - **根因**：`analyze` 只报既有问题；AOT/CFE 会额外暴露「引用未打补丁 API」。
 - **做法**：判断能否出包必须真跑一次 `flutter build apk`。合并上游时以「改动前后 analyze 结果集合一致」为口径，而不是追求零 warning。
 
+### 1.10 沙箱 cgroup 内存上限导致 Gradle 被静默杀死
+- **现象**：`Gradle build daemon disappeared unexpectedly`，无任何 OOM 日志；构建停在 `compileReleaseJavaWithJavac` 之后 / R8 阶段；`java -Xmx8G`、`-Xmx3G` 都复现。
+- **根因**：沙箱 cgroup 内存上限 **8 GiB**（`/sys/fs/cgroup/memory.max`），`memory.peak` 打满 8.59 G 后内核直接 SIGKILL。宿主 `free` 显示 123 G，会误判「内存充足」。
+- **做法**：`~/.gradle/gradle.properties` 用 `-Xmx2560m -XX:MaxMetaspaceSize=768m`、`org.gradle.daemon=false`、`org.gradle.workers.max=2`、`kotlin.daemon.jvmargs=-Xmx1024m`。定位时用 `/sys/fs/cgroup/memory.current` + `ps -eo rss,comm` 采样，不要看 `free`。
+
+### 1.11 残留 Kotlin 编译守护进程吃内存
+- **现象**：明明只跑一个构建，却同时存在 2~3 个 `kotlin-build-tools-compat` java 进程，RSS 合计 2~3 G，直接顶爆 cgroup。
+- **根因**：Kotlin daemon 不随 Gradle 退出，`-Xmx` 改小后旧进程仍占着老堆。
+- **做法**：构建前 `ps -eo pid,rss,args | grep kotlin-build-tools` 检查，杀掉旧进程；`flutter_tester` 残留同类处理。
+
+### 1.12 `PATH` 里的旧 Flutter
+- **现象**：`Could not find an option named "dart-define-from-file"`，或版本显示 3.0.0 / Dart 2.17。
+- **根因**：`/opt/flutter` 是 3.0.0 的老 SDK 且在默认 `PATH` 前面；项目用的是 `/opt/sdk/flutter`（3.47.9）。
+- **做法**：每次显式 `export PATH=/opt/sdk/flutter/bin:$PATH`（后台 shell 不会继承之前会话的 PATH）。
+
 ---
 
 ## 2. 合并上游与发布一致性
@@ -78,6 +93,16 @@
 - `flutter test`：全量通过（播放器状态机用例必须包含）。
 - `flutter build apk --release`：至少成功一次。
 - 核对 fork 特性仍在：`applicationId`、`mergeM4sToMp4`、media_kit override、清风、PiliNova 命名/CI 前缀。
+
+### 2.6 Hive 适配器字段编号冲突
+- **现象**：合并后老用户升级即崩，或读到错位的值（`buvid` 变成 bool，`replyAccountInitialized` 变成 null）。
+- **根因**：两侧都在同一个 `LoginAccount` 适配器上新增字段，上游 `buvid`(String) 占了 fork 的 `replyAccountInitialized`(bool) 用过的 **field 4**。
+- **做法**：fork 字段整体往后挪（本次挪到 field 5），`read()` 里按运行时类型区分旧数据（`field4 is String ? field4 : null` / `field4 is bool ? field4 : true`），`write()` 字段数同步 +1。**合并含 Hive 适配器的文件时，先看 `@HiveField(n)` 编号是否撞车**，不要只看字段名。
+
+### 2.7 `part` 文件化后旧 import 失效
+- **现象**：`import_of_non_library`，或类型能识别但 `List<AudioItem>` 与 `PbList<DashItem>` 不匹配。
+- **根因**：上游把 `audio_quality.dart` 改成 `base_quality.dart` 的 `part`，不能再单独 import；`findTargetAudio` 只接受 `List<AudioItem>`，gRPC 侧拿到的是 `PbList<DashItem>`。
+- **做法**：import 改到 `base_quality.dart`；非 `AudioItem` 列表（如播放器 gRPC 的 `audios`）改用 `findTargetMedia((e) => AudioQuality.fromCode(e.id).rank, targetRank)` 按 rank 匹配。
 
 ---
 
