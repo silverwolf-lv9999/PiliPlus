@@ -37,6 +37,14 @@
 - [x] **播放列表排序**：本地缓存播放列表支持正序/倒序切换
 - [x] **下载面板优化**：顶部控件两行排布，仅下载音频时自动隐藏合并选项
 
+### 开发与构建
+
+- AI / 贡献者入口：[AGENTS.md](AGENTS.md)
+- 架构与分支模型：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- 构建、签名与发版：[docs/BUILD.md](docs/BUILD.md)
+- 踩坑与根因：[docs/PITFALLS.md](docs/PITFALLS.md)
+- 变更记录：[CHANGELOG.md](CHANGELOG.md)
+
 <br/>
 
 ## 适配平台
