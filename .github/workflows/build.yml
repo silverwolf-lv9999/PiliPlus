@@ -126,6 +126,42 @@ jobs:
                   done
                   echo "prewarm failed, let gradle try by itself"; exit 0
 
+            # media_kit 在 configure 阶段从 GitHub release 下载 libmpv jar，
+            # 该通道大文件偶发 504/超时，且 downloadDependencies 不做重试，整条构建直接失败。
+            # 按 build.gradle 里固定的 sha256 预置到 build 目录，命中后它会跳过下载。
+            # 这时 patch.ps1 已经跑过 flutter pub get，pub-cache 里能定位到 media-kit。
+            - name: Prewarm media_kit libmpv jars
+              run: |
+                  MK=$(find "$HOME/.pub-cache/git" -maxdepth 1 -type d -name 'media-kit-*' 2>/dev/null | head -1)
+                  if [ -z "$MK" ]; then echo "::warning::media-kit not found in pub-cache, skip"; exit 0; fi
+                  DEST="$MK/libs/android/media_kit_libs_android_video/android/build/20260906"
+                  mkdir -p "$DEST"
+                  seed() {
+                    name="$1"; want="$2"
+                    if [ -f "$DEST/$name" ] && [ "$(sha256sum "$DEST/$name" | cut -d' ' -f1)" = "$want" ]; then
+                      echo "ok $name"; return 0
+                    fi
+                    for prefix in https://gh-proxy.com/ https://ghproxy.net/ https://ghfast.top/ ""; do
+                      url="${prefix}https://github.com/My-Responsitories/libmpv-android-video-build/releases/download/20260906/$name"
+                      if curl -fsSL --retry 2 --retry-delay 3 --max-time 600 -o "$DEST/$name.part" "$url"; then
+                        got=$(sha256sum "$DEST/$name.part" | cut -d' ' -f1)
+                        if [ "$got" = "$want" ]; then
+                          mv "$DEST/$name.part" "$DEST/$name"; echo "seeded $name"; return 0
+                        fi
+                        echo "sha256 mismatch from '${prefix:-direct}' (got $got)"; rm -f "$DEST/$name.part"
+                      fi
+                    done
+                    return 1
+                  }
+                  miss=0
+                  seed default-arm64-v8a.jar   98df6410375cc7a4be7e6eff56f9ccd88fa52678973cc23bcf7e934ab8c8682d || miss=1
+                  seed default-armeabi-v7a.jar 75ba2199848cd6224817320ddfabb7d7ea48fb4cfb1721b0090043d5a8a38602 || miss=1
+                  seed default-x86_64.jar      1caa6198de22808bd7f10fcff2923f5eb174cc42ef24569aeafb98c6597457a4 || miss=1
+                  if [ "$miss" != "0" ]; then
+                    echo "::warning::some libmpv jars not prewarmed, fallback to gradle download"
+                  fi
+                  exit 0
+
             - name: Flutter Build Release Apk
               if: ${{ github.event_name == 'workflow_dispatch' }}
               run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --build-name="${{ env.BUILD_NAME }}" --build-number="${{ env.BUILD_NUMBER }}" --no-pub
