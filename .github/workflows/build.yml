@@ -104,6 +104,28 @@ jobs:
               shell: pwsh
               run: lib/scripts/build.ps1 android "${{ github.event.inputs.app_version }}"
 
+            # Maven Central 对部分大体积 Kotlin 构件会 302 到 GitHub release，
+            # 该资源偶发 504，导致 :gradle:compileKotlin 直接失败。
+            # 先从镜像按内容哈希预热 Gradle 缓存，Gradle 校验 .sha1 后即可命中，不再下载。
+            - name: Prewarm kotlin compiler cache
+              run: |
+                  set -eu
+                  VER=2.3.20
+                  ART=org.jetbrains.kotlin/kotlin-compiler-embeddable/$VER/kotlin-compiler-embeddable-$VER.jar
+                  CACHE="$HOME/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/$VER"
+                  if [ -n "$(find "$CACHE" -name '*.jar' 2>/dev/null)" ]; then
+                    echo "already cached"; exit 0
+                  fi
+                  for BASE in https://maven.aliyun.com/repository/central https://repo.maven.apache.org/maven2; do
+                    if curl -fsSL --retry 3 --retry-delay 2 --max-time 300 -o /tmp/kc.jar "$BASE/$ART"; then
+                      SHA=$(sha1sum /tmp/kc.jar | cut -d' ' -f1)
+                      mkdir -p "$CACHE/$SHA"
+                      cp /tmp/kc.jar "$CACHE/$SHA/kotlin-compiler-embeddable-$VER.jar"
+                      echo "seeded $SHA"; exit 0
+                    fi
+                  done
+                  echo "prewarm failed, let gradle try by itself"; exit 0
+
             - name: Flutter Build Release Apk
               if: ${{ github.event_name == 'workflow_dispatch' }}
               run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --build-name="${{ env.BUILD_NAME }}" --build-number="${{ env.BUILD_NUMBER }}" --no-pub
